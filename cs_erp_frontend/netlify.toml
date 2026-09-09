@@ -1,0 +1,9 @@
+[build]
+  command = "rm -rf node_modules .next && pnpm install --force && pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
