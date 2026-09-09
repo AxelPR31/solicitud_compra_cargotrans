@@ -15,33 +15,10 @@ interface AppShellProps {
 }
 
 const tabTitles: Record<NavTab, { title: string; subtitle: string; breadcrumb?: string }> = {
-  recipes: {
-    subtitle: "Gestión de Recetas",
-    title: "Recetas de Transformación",
-  },
-  factors: {
-    subtitle: "Factores de Valuación",
-    title: "Factores de Sobrantes",
-  },
-  extractor: {
-    subtitle: "Registro de Producción",
-    title: "Nueva Orden de Producción",
-    breadcrumb: "Gestión de Recetas › Nueva Orden de Producción",
-  },
-  history: {
-    subtitle: "Historial de Órdenes",
-    title: "Órdenes de Producción",
-    breadcrumb: "Historial de Órdenes",
-  },
-  transfers: {
-    subtitle: "Gestión de Solicitudes a Casa Matriz",
-    title: "Traslados Internos",
-    breadcrumb: "Traslados Internos",
-  },
-  consecutivos: {
-    subtitle: "Configuración de Máscaras y Consecutivos",
-    title: "Administración de Consecutivos",
-    breadcrumb: "Consecutivos",
+  "solicitud-compra": {
+    subtitle: "Módulo de Compras",
+    title: "Solicitud de Compra",
+    breadcrumb: "Solicitud de Compra",
   },
 };
 
@@ -64,12 +41,7 @@ export function AppShell({
         isCollapsed={isCollapsed}
         onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
       />
-      <div
-        className={cn(
-          "transition-all duration-300 flex flex-col min-h-screen",
-          isCollapsed ? "pl-20" : "pl-64"
-        )}
-      >
+      <div className={cn("transition-all duration-300 flex flex-col min-h-screen", isCollapsed ? "pl-20" : "pl-64")}>
         <Header
           serverOnline={serverOnline}
           title={title || pageMeta.title}

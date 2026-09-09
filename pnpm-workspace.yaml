@@ -1,0 +1,9 @@
+packages:
+  - cs_erp_server
+  - cs_erp_frontend
+
+allowBuilds:
+  '@nestjs/core': true
+  bcrypt: true
+  sharp: true
+  unrs-resolver: true

@@ -1,18 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  BookOpen,
-  ClipboardList,
-  Percent,
-  History,
-  ChevronLeft,
-  ChevronRight,
-  Truck,
-  Hash
-} from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 
-export type NavTab = "recipes" | "factors" | "extractor" | "history" | "transfers" | "consecutivos";
+export type NavTab = "solicitud-compra";
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -24,14 +15,9 @@ interface SidebarProps {
 const navItems: {
   id: NavTab;
   label: string;
-  icon: typeof BookOpen;
+  icon: typeof ShoppingCart;
 }[] = [
-  { id: "recipes", label: "Gestión de Recetas", icon: BookOpen },
-  { id: "factors", label: "Factores de Valuación", icon: Percent },
-  { id: "extractor", label: "Registro de Producción", icon: ClipboardList },
-  { id: "history", label: "Historial de Órdenes", icon: History },
-  { id: "transfers", label: "Traslados Internos", icon: Truck },
-  { id: "consecutivos", label: "Consecutivos", icon: Hash },
+  { id: "solicitud-compra", label: "Solicitud de Compra", icon: ShoppingCart },
 ];
 
 export function Sidebar({
@@ -47,20 +33,14 @@ export function Sidebar({
         isCollapsed ? "w-20" : "w-64"
       )}
     >
-      <div
-        className="flex h-16 items-center justify-center border-b border-border transition-all duration-300 px-4"
-      >
-        {isCollapsed ? (
-          <img src="/maxERP-logo.png" alt="maxERP" className="h-6 w-auto object-contain select-none" />
-        ) : (
-          <img src="/maxERP-logo.png" alt="maxERP" className="h-9 w-auto object-contain select-none" />
-        )}
+      <div className="flex h-16 items-center justify-center border-b border-border transition-all duration-300 px-4">
+        <img src="/maxERP-logo.png" alt="maxERP" className={cn("w-auto object-contain select-none", isCollapsed ? "h-6" : "h-9")} />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
         {!isCollapsed && (
           <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 select-none">
-            Módulo de Producción
+            Módulo de Compras
           </p>
         )}
         <ul className="space-y-1">
@@ -76,15 +56,11 @@ export function Sidebar({
                   className={cn(
                     "flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 cursor-pointer outline-none",
                     isCollapsed ? "justify-center px-0" : "px-3 gap-3",
-                    isActive
-                      ? "bg-brand text-white shadow-sm"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    isActive ? "bg-brand text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0 opacity-80" />
-                  {!isCollapsed && (
-                    <span className="truncate">{item.label}</span>
-                  )}
+                  <Icon className="h-5 w-5 shrink-0" />
+                  {!isCollapsed && <span>{item.label}</span>}
                 </button>
               </li>
             );
@@ -92,11 +68,14 @@ export function Sidebar({
         </ul>
       </nav>
 
-    
-      <div className="border-t border-border p-4 select-none">
-        <p className="text-center text-[11px] text-slate-400 truncate">
-          {isCollapsed ? "CS" : "© 2026 Corpsoft S.A"}
-        </p>
+      <div className="border-t border-border p-3">
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="flex w-full items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition-colors"
+        >
+          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
       </div>
     </aside>
   );

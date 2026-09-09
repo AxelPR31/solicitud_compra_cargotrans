@@ -1,0 +1,28 @@
+[
+  {
+    "SOLICITUD_OC": "SC00000001",
+    "SOLICITUD_OC_LINEA": 1,
+    "USUARIO_CANCELA": null,
+    "ARTICULO": "AC0002",
+    "DESCRIPCION": "Apple Cable USB-C a Lightning (3.3 pies)",
+    "CANTIDAD": 1.00000000,
+    "SALDO": 1.00000000,
+    "ESTADO": "A",
+    "COMENTARIO": null,
+    "FECHA_REQUERIDA": "2026-09-09T00:00:00",
+    "UNIDAD_DISTRIBUCIO": null,
+    "FECHA_HORA_CANCELA": null,
+    "CENTRO_COSTO": null,
+    "CUENTA_CONTABLE": null,
+    "E_MAIL": null,
+    "FASE": null,
+    "PROYECTO": null,
+    "ORDEN_CAMBIO": null,
+    "NoteExistsFlag": 0,
+    "RecordDate": "2026-09-09T09:54:16.703",
+    "RowPointer": "DBF0998C-DA1B-4E0D-B340-4C16402D4111",
+    "CreatedBy": "CO/ERPADMIN",
+    "UpdatedBy": "CO/ERPADMIN",
+    "CreateDate": "2026-09-09T09:54:16.703"
+  }
+]

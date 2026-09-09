@@ -1,0 +1,14 @@
+[
+  {
+    "DEPARTAMENTO": "ND",
+    "DESCRIPCION": "No definido",
+    "JEFE": null,
+    "ACTIVO": "S",
+    "NoteExistsFlag": 0,
+    "RecordDate": "2024-12-10T11:40:12.643",
+    "RowPointer": "a51d4a11-b968-4d07-be72-c8172cd68bfa",
+    "CreatedBy": "sa",
+    "UpdatedBy": "sa",
+    "CreateDate": "2024-12-10T11:40:12.643"
+  }
+]

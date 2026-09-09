@@ -1,2 +1,4 @@
 /CS_ERP.rar
 cs_erp_frontend/.env
+node_modules
+.pnpm-store

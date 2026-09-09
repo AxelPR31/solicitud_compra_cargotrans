@@ -43,4 +43,7 @@ export class Articulo {
 
   @Column({ name: 'UNIDAD_VENTA' })
   unidadVenta: string
+
+  @Column({ name: 'ARTICULO_CUENTA', nullable: true })
+  articuloCuenta: string
 }

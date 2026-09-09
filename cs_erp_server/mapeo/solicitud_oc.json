@@ -1,0 +1,29 @@
+[
+  {
+    "SOLICITUD_OC": "SC00000001",
+    "DEPARTAMENTO": "ND",
+    "FECHA_SOLICITUD": "2026-09-09T00:00:00",
+    "FECHA_REQUERIDA": "2026-09-09T00:00:00",
+    "AUTORIZADA_POR": null,
+    "FECHA_AUTORIZADA": null,
+    "PRIORIDAD": "M",
+    "LINEAS_NO_ASIG": 1,
+    "ESTADO": "A",
+    "COMENTARIO": "PRUEBA CARGO TRANS",
+    "FECHA_HORA": "2026-09-09T09:54:16.483",
+    "USUARIO": "ERPADMIN",
+    "USUARIO_CANCELA": null,
+    "FECHA_HORA_CANCELA": null,
+    "RUBRO1": "PRUEBA",
+    "RUBRO2": null,
+    "RUBRO3": null,
+    "RUBRO4": null,
+    "RUBRO5": null,
+    "NoteExistsFlag": 0,
+    "RecordDate": "2026-09-09T09:54:16.567",
+    "RowPointer": "129EAE67-8C4E-44A7-9A8E-1D8241DA4014",
+    "CreatedBy": "CO/ERPADMIN",
+    "UpdatedBy": "CO/ERPADMIN",
+    "CreateDate": "2026-09-09T09:54:16.563"
+  }
+]

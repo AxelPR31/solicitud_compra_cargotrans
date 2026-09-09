@@ -15,77 +15,56 @@ export interface Articulo {
   unidadVenta: string
 }
 
-export interface RecetaMateriaPrima {
-  id?: number
-  recetaId?: number
-  articulo: string
-  nombre?: string
-}
-
-export interface RecetaEncabezado {
-  id: number
-  articuloMateriaPrima: string
+export interface Departamento {
+  departamento: string
   descripcion: string
-  estado: string
-  materiasPrimas?: RecetaMateriaPrima[]
+  jefe?: string
+  activo: string
 }
 
-export interface RecetaDetalle {
-  id: number
-  recetaId: number
-  articuloTerminado: string
-  esMermaRecorte: boolean
-  descripcion?: string
+export interface GlobalesCo {
+  ultSolicitud: string
+  usarRubros?: string
+  rubro1SolNom?: string
+  rubro2SolNom?: string
+  rubro3SolNom?: string
+  rubro4SolNom?: string
+  rubro5SolNom?: string
+  maximoLinorden?: number
+  sugerirFecha?: string
 }
 
-export interface OrdenProduccionMateriaPrima {
-  id?: number
-  vinculoId?: number
+export interface SolicitudOcLinea {
+  solicitudOc: string
+  solicitudOcLinea: number
   articulo: string
-  nombre?: string
+  descripcion: string
   cantidad: number
-  costoUnitario: number
-  costoTotal?: number
-}
-
-
-export interface FactorValuacion {
-  articulo: string
-  factor: number
-  descripcion?: string
-}
-
-export interface Bodega {
-  bodega: string
-  nombre: string
-}
-
-export interface TrasladoInternoDetalle {
-  id?: number
-  trasladoInternoId?: number
-  articulo: string
-  descripcion: string
-  tmpVd?: string
-  oz?: number
-  unidad?: number
-  lb?: number
-  unidadMedida?: string
-  costoUnitario: number
-  costoTotal: number
-}
-
-export interface TrasladoInternoEncabezado {
-  id: number
-  bodegaOrigen: string
-  bodegaDestino: string
-  fecha: string | Date
+  saldo: number
   estado: string
-  referencia?: string
-  usuario: string
+  comentario?: string
+  fechaRequerida?: string
   centroCosto?: string
   cuentaContable?: string
-  documentoInvSoftland?: string
-  numeroDocumento?: string
-  detalles?: TrasladoInternoDetalle[]
 }
 
+export interface SolicitudOc {
+  solicitudOc: string
+  departamento: string
+  fechaSolicitud: string
+  fechaRequerida: string
+  autorizadaPor?: string
+  fechaAutorizada?: string
+  prioridad: string
+  lineasNoAsig: number
+  estado: string
+  comentario?: string
+  fechaHora?: string
+  usuario?: string
+  rubro1?: string
+  rubro2?: string
+  rubro3?: string
+  rubro4?: string
+  rubro5?: string
+  lineas?: SolicitudOcLinea[]
+}

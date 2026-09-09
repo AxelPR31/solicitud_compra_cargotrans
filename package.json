@@ -1,0 +1,12 @@
+{
+  "name": "solicitud-compra-cargotrans",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "install:all": "pnpm install"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
