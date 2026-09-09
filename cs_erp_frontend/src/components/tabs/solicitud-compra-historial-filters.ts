@@ -45,8 +45,17 @@ export function countActiveFilters(filters: HistorialFilters): number {
   return count;
 }
 
-export function buildHistorialQueryParams(filters: HistorialFilters): URLSearchParams {
-  const params = new URLSearchParams({ limit: "200" });
+export const HISTORIAL_PAGE_SIZE = 25;
+
+export function buildHistorialQueryParams(
+  filters: HistorialFilters,
+  page = 1,
+  pageSize = HISTORIAL_PAGE_SIZE,
+): URLSearchParams {
+  const params = new URLSearchParams({
+    limit: String(pageSize),
+    offset: String((page - 1) * pageSize),
+  });
   if (filters.solicitudDesde) params.set("solicitudDesde", filters.solicitudDesde);
   if (filters.solicitudHasta) params.set("solicitudHasta", filters.solicitudHasta);
   if (filters.departamentoDesde) params.set("departamentoDesde", filters.departamentoDesde);

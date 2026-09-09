@@ -2,7 +2,8 @@
   "name": "solicitud-compra-cargotrans",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r --parallel dev",
+    "dev": "node scripts/dev.mjs",
+    "dev:stop": "node scripts/kill-dev-ports.mjs",
     "build": "pnpm -r build",
     "install:all": "pnpm install"
   },

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common'
+import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { CreateCuentacontableDto } from './dto/create-cuenta-contable.dto'
 import { UpdateCuentacontableDto } from './dto/update-cuenta-contable.dto'
 import { DataSource, Repository } from 'typeorm'
@@ -15,6 +15,20 @@ export class CuentacontableService {
 
   constructor(@Inject(TENANT_CONENCTION) private dataSource: DataSource) {
     this.repository = dataSource.getRepository(Cuentacontable)
+  }
+
+  aceptaMovimientos(aceptadatos?: string | null) {
+    return (aceptadatos?.trim().toUpperCase() ?? '') === 'S'
+  }
+
+  async assertAceptaMovimientos(cuentaContable: string) {
+    const cuenta = await this.findOne(cuentaContable.trim())
+    if (!cuenta) {
+      throw new NotFoundException(`La cuenta contable ${cuentaContable} no existe.`)
+    }
+    if (!this.aceptaMovimientos(cuenta.aceptadatos)) {
+      throw new BadRequestException('La cuenta seleccionada no acepta movimiento.')
+    }
   }
 
   async create(createCuentacontableDto: CreateCuentacontableDto) {
@@ -79,17 +93,17 @@ export class CuentacontableService {
 
   findOne(id: string) {
     return this.repository
-      .createQueryBuilder()
-      .where('cuentacontable = :id', { id })
+      .createQueryBuilder('c')
+      .where('RTRIM(c.cuentacontable) = :id', { id: id.trim() })
       .getOne()
   }
 
   update(id: string, updateCuentacontableDto: UpdateCuentacontableDto) {
     return this.repository
       .createQueryBuilder()
-      .update()
+      .update(Cuentacontable)
       .set(updateCuentacontableDto)
-      .where('cuentacontable = :id', { id })
+      .where('RTRIM(CUENTA_CONTABLE) = :id', { id: id.trim() })
       .execute()
   }
 
@@ -97,7 +111,8 @@ export class CuentacontableService {
     return await this.repository
       .createQueryBuilder()
       .delete()
-      .where('cuentacontable = :cuentacontable', { cuentacontable: id })
+      .from(Cuentacontable)
+      .where('RTRIM(CUENTA_CONTABLE) = :id', { id: id.trim() })
       .execute()
   }
 }

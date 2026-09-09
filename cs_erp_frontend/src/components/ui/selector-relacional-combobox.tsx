@@ -29,8 +29,10 @@ interface Props {
   placeholder?: string
   fallbackLabel?: string
   formatOptionLabel?: (item: Item) => string
+  formatOptionParts?: (item: Item) => { code: string; description: string }
   tooltipKey?: string
   maxLabelLength?: number
+  disabled?: boolean
   onSearch?: (search: string) => Promise<Item[]> | any
 }
 
@@ -45,8 +47,10 @@ export function SelectorRelacionalComboBox({
   fallbackLabel,
   clearable = true,
   formatOptionLabel,
+  formatOptionParts,
   tooltipKey,
   maxLabelLength,
+  disabled = false,
   onSearch,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -94,8 +98,18 @@ export function SelectorRelacionalComboBox({
   }, [options, localOptions, valueStr, valueKey])
 
   const renderLabel = (item: Item): string => {
+    if (formatOptionParts) {
+      const { code, description } = formatOptionParts(item)
+      return description ? `${code} - ${description}` : code
+    }
     if (formatOptionLabel) return formatOptionLabel(item)
     return safeToString(item[displayKey])
+  }
+
+  const renderOptionParts = (item: Item) => {
+    if (formatOptionParts) return formatOptionParts(item)
+    const label = renderLabel(item)
+    return { code: label, description: '' }
   }
 
   const rawSelectedLabel = selectedItem
@@ -148,7 +162,11 @@ export function SelectorRelacionalComboBox({
   const triggerContent = (
     <button
       type='button'
-      onClick={() => setOpen((v) => !v)}
+      title={hasValue ? rawSelectedLabel : undefined}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) setOpen((v) => !v)
+      }}
       className={cn(
         // base
         'group relative flex h-10 w-full items-center justify-between gap-2',
@@ -156,10 +174,11 @@ export function SelectorRelacionalComboBox({
         'text-sm ring-offset-background outline-none',
         'transition-all duration-150',
         // hover / focus
-        'hover:border-border hover:shadow-md',
-        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+        !disabled && 'hover:border-border hover:shadow-md',
+        !disabled && 'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
         // open state
-        open && 'border-ring/60 shadow-md ring-1 ring-ring/20',
+        open && !disabled && 'border-ring/60 shadow-md ring-1 ring-ring/20',
+        disabled && 'cursor-not-allowed bg-slate-100 text-slate-500 opacity-80',
       )}
     >
       <span
@@ -183,7 +202,7 @@ export function SelectorRelacionalComboBox({
   )
 
   return (
-    <div className='flex w-full flex-col gap-1.5'>
+    <div className='flex w-full min-w-0 flex-col gap-1.5'>
       {label && (
         <label className='text-xs font-medium tracking-wide text-muted-foreground/80 uppercase'>
           {label}
@@ -191,8 +210,9 @@ export function SelectorRelacionalComboBox({
       )}
 
       <Popover
-        open={open}
+        open={disabled ? false : open}
         onOpenChange={(next) => {
+          if (disabled) return
           if (!next) {
             inputRef.current?.blur()
             if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
@@ -242,10 +262,14 @@ export function SelectorRelacionalComboBox({
         </div>
 
         <PopoverContent
+          side='bottom'
           align='start'
-          sideOffset={6}
+          sideOffset={4}
+          collisionPadding={12}
+          sticky='partial'
+          onOpenAutoFocus={(e) => e.preventDefault()}
           className={cn(
-            'w-[var(--radix-popover-trigger-width)] p-0 shadow-xl',
+            'z-50 !w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-1.5rem)] p-0 shadow-xl',
             'rounded-xl border border-border/60',
             'overflow-hidden',
           )}
@@ -282,15 +306,15 @@ export function SelectorRelacionalComboBox({
           </div>
 
           {/* Lista */}
-          <div className='h-[260px] overflow-y-auto overscroll-contain p-1.5'>
+          <div className='max-h-[200px] overflow-y-auto overflow-x-hidden overscroll-contain p-1.5'>
             {loading ? (
-              <div className='flex flex-col items-center justify-center h-[240px] text-center'>
+              <div className='flex flex-col items-center justify-center min-h-[120px] py-8 text-center'>
                 <span className='text-xs text-muted-foreground animate-pulse'>
                   Buscando...
                 </span>
               </div>
             ) : filteredOptions.length === 0 ? (
-              <div className='flex flex-col items-center justify-center h-[240px] text-center'>
+              <div className='flex flex-col items-center justify-center min-h-[120px] py-8 text-center'>
                 <span className='text-xs text-muted-foreground'>
                   {search ? `Sin resultados para "${search}"` : 'Sin opciones disponibles'}
                 </span>
@@ -299,6 +323,7 @@ export function SelectorRelacionalComboBox({
               filteredOptions.map((item, idx) => {
                 const itemValue = safeToString(item[valueKey])
                 const isSelected = itemValue === valueStr
+                const optionParts = formatOptionParts ? renderOptionParts(item) : null
 
                 return (
                   <button
@@ -333,7 +358,20 @@ export function SelectorRelacionalComboBox({
                       {isSelected && <CheckIcon className='h-2.5 w-2.5' />}
                     </span>
 
-                    <span className='flex-1 truncate'>{renderLabel(item)}</span>
+                    {optionParts ? (
+                      <span className='flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden py-0.5'>
+                        <span className='truncate font-mono text-[11px] leading-tight text-muted-foreground'>
+                          {optionParts.code}
+                        </span>
+                        {optionParts.description && (
+                          <span className='line-clamp-2 text-xs leading-snug text-foreground'>
+                            {optionParts.description}
+                          </span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className='flex-1 truncate'>{renderLabel(item)}</span>
+                    )}
                   </button>
                 )
               })

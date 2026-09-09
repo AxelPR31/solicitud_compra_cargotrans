@@ -19,6 +19,7 @@ import {
   buildHistorialQueryParams,
   countActiveFilters,
   defaultHistorialFilters,
+  HISTORIAL_PAGE_SIZE,
   type HistorialFilters,
 } from "./solicitud-compra-historial-filters";
 
@@ -76,6 +77,8 @@ export function SolicitudCompraHistorialTab({
   refreshKey = 0,
 }: SolicitudCompraHistorialTabProps) {
   const [history, setHistory] = useState<SolicitudOc[]>([]);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [page, setPage] = useState(1);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [draftFilters, setDraftFilters] = useState<HistorialFilters>(defaultHistorialFilters);
   const [appliedFilters, setAppliedFilters] = useState<HistorialFilters>(defaultHistorialFilters);
@@ -85,25 +88,34 @@ export function SolicitudCompraHistorialTab({
   const [sortAsc, setSortAsc] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const fetchHistory = useCallback(async (filters = appliedFilters) => {
+  const fetchHistory = useCallback(async (filters = appliedFilters, pageNum = page) => {
     if (!serverOnline) return;
     setLoadingHistory(true);
     try {
-      const params = buildHistorialQueryParams(filters);
+      const params = buildHistorialQueryParams(filters, pageNum);
       const res = await fetch(`${API_BASE_URL}/solicitud-oc?${params.toString()}`);
-      if (res.ok) setHistory(await res.json());
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setHistory(data);
+          setTotalRecords(data.length);
+        } else {
+          setHistory(data.items ?? []);
+          setTotalRecords(data.total ?? 0);
+        }
+      }
     } catch {
       toast.error("No se pudo cargar el historial");
     } finally {
       setLoadingHistory(false);
     }
-  }, [serverOnline, API_BASE_URL, appliedFilters]);
+  }, [serverOnline, API_BASE_URL, appliedFilters, page]);
 
   const applyFilters = () => {
     setAppliedFilters(draftFilters);
     setSelectedId(null);
+    setPage(1);
     setFiltersOpen(false);
-    fetchHistory(draftFilters);
   };
 
   const resetFilters = () => {
@@ -111,10 +123,13 @@ export function SolicitudCompraHistorialTab({
     setDraftFilters(defaults);
     setAppliedFilters(defaults);
     setSelectedId(null);
-    fetchHistory(defaults);
+    setPage(1);
   };
 
   const activeFilterCount = countActiveFilters(appliedFilters);
+  const totalPages = Math.max(1, Math.ceil(totalRecords / HISTORIAL_PAGE_SIZE));
+  const rangeFrom = totalRecords === 0 ? 0 : (page - 1) * HISTORIAL_PAGE_SIZE + 1;
+  const rangeTo = Math.min(page * HISTORIAL_PAGE_SIZE, totalRecords);
 
   const togglePrioridad = (value: SolicitudOcPrioridad) => {
     setDraftFilters(prev => ({
@@ -135,8 +150,8 @@ export function SolicitudCompraHistorialTab({
   };
 
   useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory, refreshKey]);
+    fetchHistory(appliedFilters, page);
+  }, [fetchHistory, refreshKey, page]);
 
   const fetchDetail = useCallback(async (id: string) => {
     const res = await fetch(`${API_BASE_URL}/solicitud-oc/${encodeURIComponent(id)}`);
@@ -262,7 +277,7 @@ export function SolicitudCompraHistorialTab({
             <div>
               <CardTitle className="text-base">Solicitudes</CardTitle>
               <p className="mt-1 text-xs text-slate-500">
-                {sortedHistory.length} registro{sortedHistory.length === 1 ? "" : "s"}
+                {totalRecords} registro{totalRecords === 1 ? "" : "s"}
                 {selectedId ? ` · seleccionada: ${selectedId}` : ""}
                 {activeFilterCount > 0 ? ` · ${activeFilterCount} filtro${activeFilterCount === 1 ? "" : "s"} activo${activeFilterCount === 1 ? "" : "s"}` : ""}
               </p>
@@ -284,7 +299,7 @@ export function SolicitudCompraHistorialTab({
                 )}
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => fetchHistory()} disabled={loadingHistory}>
+              <Button type="button" variant="outline" size="sm" onClick={() => fetchHistory(appliedFilters, page)} disabled={loadingHistory}>
                 <RefreshCw className={cn("h-4 w-4", loadingHistory && "animate-spin")} />
               </Button>
               <Button type="button" size="sm" disabled={!canEdit} onClick={() => selectedId && onEdit(selectedId)}>
@@ -420,6 +435,36 @@ export function SolicitudCompraHistorialTab({
                   })}
                 </tbody>
               </table>
+            </div>
+          )}
+          {!loadingHistory && totalRecords > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
+              <p className="text-xs text-slate-500">
+                Mostrando {rangeFrom}–{rangeTo} de {totalRecords}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page <= 1 || loadingHistory}
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                >
+                  Anterior
+                </Button>
+                <span className="min-w-[100px] text-center text-xs text-slate-600">
+                  Página {page} de {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={page >= totalPages || loadingHistory}
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                >
+                  Siguiente
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>

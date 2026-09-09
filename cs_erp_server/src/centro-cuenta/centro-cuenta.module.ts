@@ -8,6 +8,7 @@ import { CentroCuentaService } from './centro-cuenta.service'
   imports: [TenantModule, AuthModule],
   controllers: [CentroCuentaController],
   providers: [CentroCuentaService],
+  exports: [CentroCuentaService],
 })
 export class CentroCuentaModule {}
 

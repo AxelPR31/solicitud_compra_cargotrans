@@ -14,6 +14,8 @@ import { FindSolicitudOcDto } from './dto/find-solicitud-oc.dto'
 import { GlobalesCoService } from '../globales-co/globales-co.service'
 import { ArticuloCuentaService } from '../articulo-cuenta/articulo-cuenta.service'
 import { DepartamentoService } from '../departamento/departamento.service'
+import { CentroCuentaService } from '../centro-cuenta/centro-cuenta.service'
+import { CuentacontableService } from '../mantenimientos/cuenta-contable/cuenta-contable.service'
 import { Articulo } from '../articulo/entities/articulo.entity'
 import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
 
@@ -26,25 +28,52 @@ export class SolicitudOcService {
     private readonly globalesCoService: GlobalesCoService,
     private readonly articuloCuentaService: ArticuloCuentaService,
     private readonly departamentoService: DepartamentoService,
+    private readonly centroCuentaService: CentroCuentaService,
+    private readonly cuentacontableService: CuentacontableService,
   ) {
     this.repository = dataSource.getRepository(SolicitudOc)
   }
 
   private parseDate(value: Date | string | undefined, fallback?: Date): Date {
-    if (!value) return fallback ?? new Date()
-    if (value instanceof Date) return value
-    const parts = String(value).split('-')
+    if (!value) {
+      return fallback ? this.dateAtMidnight(fallback) : this.dateAtMidnight(new Date())
+    }
+    if (value instanceof Date) return this.dateAtMidnight(value)
+
+    const raw = String(value).trim()
+    const datePart = raw.includes('T') ? raw.split('T')[0] : raw.slice(0, 10)
+    const parts = datePart.split('-')
     if (parts.length === 3) {
       const year = parseInt(parts[0], 10)
       const month = parseInt(parts[1], 10) - 1
       const day = parseInt(parts[2], 10)
-      return new Date(year, month, day, 12, 0, 0)
+      if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+        return new Date(year, month, day, 0, 0, 0, 0)
+      }
     }
-    return new Date(value)
+
+    return this.dateAtMidnight(new Date(raw))
+  }
+
+  private dateAtMidnight(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0)
   }
 
   private buildCreatedBy(usuario: string): string {
     return usuario.includes('/') ? usuario : `CO/${usuario}`
+  }
+
+  private async validarCentroCuentaLinea(
+    centroCosto: string | null | undefined,
+    cuentaContable: string | null | undefined,
+  ) {
+    if (!centroCosto || !cuentaContable) return
+    await this.centroCuentaService.assertRelacionActiva(centroCosto, cuentaContable)
+  }
+
+  private async validarCuentaContableLinea(cuentaContable: string | null | undefined) {
+    if (!cuentaContable) return
+    await this.cuentacontableService.assertAceptaMovimientos(cuentaContable)
   }
 
   async create(createDto: CreateSolicitudOcDto) {
@@ -131,6 +160,9 @@ export class SolicitudOcService {
             `La cantidad del artículo ${linea.articulo} debe ser mayor a cero.`,
           )
         }
+
+        await this.validarCentroCuentaLinea(centroCosto, cuentaContable)
+        await this.validarCuentaContableLinea(cuentaContable)
 
         const lineaEntity = queryRunner.manager.create(SolicitudOcLinea, {
           solicitudOc: nuevoCodigo,
@@ -243,7 +275,8 @@ export class SolicitudOcService {
       qb.andWhere('RTRIM(s.estado) IN (:...estadoList)', { estadoList })
     }
 
-    return qb.getMany()
+    const [items, total] = await qb.getManyAndCount()
+    return { items, total, limit, offset }
   }
 
   async findOne(solicitudOc: string) {
@@ -300,6 +333,11 @@ export class SolicitudOcService {
           const linea = lineas[i]
           const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
           const cantidad = Number(linea.cantidad)
+          const centroCosto = linea.centroCosto || null
+          const cuentaContable = linea.cuentaContable || resuelto.cuentaContable
+
+          await this.validarCentroCuentaLinea(centroCosto, cuentaContable)
+          await this.validarCuentaContableLinea(cuentaContable)
 
           const lineaEntity = queryRunner.manager.create(SolicitudOcLinea, {
             solicitudOc,
@@ -311,8 +349,8 @@ export class SolicitudOcService {
             estado: 'A',
             comentario: linea.comentario || null,
             fechaRequerida: this.parseDate(linea.fechaRequerida, existing.fechaRequerida),
-            centroCosto: linea.centroCosto || null,
-            cuentaContable: linea.cuentaContable || resuelto.cuentaContable,
+            centroCosto,
+            cuentaContable,
             createdBy: existing.createdBy,
             updatedBy: existing.updatedBy,
             createDate: now,

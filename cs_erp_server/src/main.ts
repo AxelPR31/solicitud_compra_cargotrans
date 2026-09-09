@@ -1,7 +1,7 @@
 import './load-env'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './app.module'
-import { ArgumentsHost, ValidationPipe } from '@nestjs/common'
+import { ArgumentsHost, HttpException, HttpStatus, ValidationPipe } from '@nestjs/common'
 import * as cookieParser from 'cookie-parser'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import constants from './core/constants'
@@ -128,13 +128,25 @@ app.enableCors({
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
   app.useGlobalFilters(
     new (class {
-      catch(exception: any, host: ArgumentsHost) {
-        console.error('Global exception:', exception)
+      catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp()
         const res = ctx.getResponse()
-        res.status(400).json({
-          message: exception.message || 'Unhandled error',
-          error: exception,
+
+        if (exception instanceof HttpException) {
+          const status = exception.getStatus()
+          const body = exception.getResponse()
+          console.error(`HTTP ${status}:`, body)
+          return res.status(status).json(
+            typeof body === 'string' ? { message: body, statusCode: status } : body,
+          )
+        }
+
+        const message =
+          exception instanceof Error ? exception.message : 'Error interno del servidor'
+        console.error('Unhandled exception:', exception)
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message,
         })
       }
     })(),

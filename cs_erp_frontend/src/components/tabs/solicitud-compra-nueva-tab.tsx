@@ -21,6 +21,24 @@ interface SolicitudCompraNuevaTabProps extends SolicitudCompraTabBaseProps {
   onClearEdit: () => void;
 }
 
+const MSG_CUENTA_NO_MOVIMIENTO = "La cuenta seleccionada no acepta movimiento.";
+
+const cuentaAceptaMovimiento = (aceptadatos?: string | null) =>
+  (aceptadatos?.trim().toUpperCase() ?? "") === "S";
+
+const parseApiError = (errText: string): string => {
+  try {
+    const parsed = JSON.parse(errText);
+    const msg = parsed?.message;
+    if (typeof msg === "string") return msg;
+    if (Array.isArray(msg)) return msg.join(", ");
+    if (msg && typeof msg === "object" && typeof msg.message === "string") return msg.message;
+    return errText;
+  } catch {
+    return errText;
+  }
+};
+
 export function SolicitudCompraNuevaTab({
   articulos,
   serverOnline,
@@ -38,6 +56,7 @@ export function SolicitudCompraNuevaTab({
   const [previewConsecutivo, setPreviewConsecutivo] = useState("SC00000001");
   const [centroCostos, setCentroCostos] = useState<any[]>([]);
   const [cuentasContables, setCuentasContables] = useState<any[]>([]);
+  const [cuentasPorLinea, setCuentasPorLinea] = useState<Record<number, any[]>>({});
 
   const [departamento, setDepartamento] = useState("");
   const [fechaSolicitud, setFechaSolicitud] = useState(new Date().toISOString().split("T")[0]);
@@ -59,12 +78,11 @@ export function SolicitudCompraNuevaTab({
     async function loadCatalogs() {
       if (!serverOnline) return;
       try {
-        const [depRes, globRes, consRes, ccRes, accRes] = await Promise.all([
+        const [depRes, globRes, consRes, ccRes] = await Promise.all([
           fetch(`${API_BASE_URL}/departamento?activo=S&limit=200`),
           fetch(`${API_BASE_URL}/globales-co`),
           fetch(`${API_BASE_URL}/globales-co/siguiente-solicitud`),
           fetch(`${API_BASE_URL}/centrocosto?limit=1000`),
-          fetch(`${API_BASE_URL}/cuentacontable?limit=10000`),
         ]);
 
         if (depRes.ok) {
@@ -78,13 +96,16 @@ export function SolicitudCompraNuevaTab({
           setPreviewConsecutivo(data.siguiente);
         }
         if (ccRes.ok) setCentroCostos(await ccRes.json());
-        if (accRes.ok) setCuentasContables(await accRes.json());
       } catch (err) {
         console.error("Error cargando catálogos", err);
       }
     }
     loadCatalogs();
   }, [serverOnline, API_BASE_URL]);
+
+  useEffect(() => {
+    setLineas(prev => prev.map(linea => ({ ...linea, fechaRequerida })));
+  }, [fechaRequerida]);
 
   useEffect(() => {
     if (!editSolicitudId || !serverOnline) return;
@@ -103,17 +124,29 @@ export function SolicitudCompraNuevaTab({
       setRubro3(detail.rubro3 || "");
       setRubro4(detail.rubro4 || "");
       setRubro5(detail.rubro5 || "");
-      setLineas(
-        (detail.lineas || []).map((l: SolicitudOcLinea) => ({
-          articulo: l.articulo,
-          descripcion: l.descripcion,
-          cantidad: Number(l.cantidad),
-          comentario: l.comentario || "",
-          centroCosto: l.centroCosto || "",
-          cuentaContable: l.cuentaContable || "",
-          fechaRequerida: l.fechaRequerida ? new Date(l.fechaRequerida).toISOString().split("T")[0] : fechaRequerida,
-        }))
+      const lineasEdit = (detail.lineas || []).map((l: SolicitudOcLinea) => ({
+        articulo: l.articulo,
+        descripcion: l.descripcion,
+        cantidad: Number(l.cantidad),
+        comentario: l.comentario || "",
+        centroCosto: l.centroCosto || "",
+        cuentaContable: l.cuentaContable || "",
+        fechaRequerida: l.fechaRequerida ? new Date(l.fechaRequerida).toISOString().split("T")[0] : fechaRequerida,
+      }));
+      setLineas(lineasEdit);
+
+      const cuentasMap: Record<number, any[]> = {};
+      await Promise.all(
+        lineasEdit.map(async (linea, idx) => {
+          if (!linea.centroCosto) return;
+          const params = new URLSearchParams({ limit: "50" });
+          const ccRes = await fetch(
+            `${API_BASE_URL}/centro-cuenta/cuentas-por-centro/${encodeURIComponent(linea.centroCosto)}?${params.toString()}`
+          );
+          if (ccRes.ok) cuentasMap[idx] = await ccRes.json();
+        })
       );
+      setCuentasPorLinea(cuentasMap);
     }
     loadForEdit();
   }, [editSolicitudId, serverOnline, API_BASE_URL]);
@@ -124,6 +157,144 @@ export function SolicitudCompraNuevaTab({
       if (res.ok) return await res.json();
     } catch {}
     return null;
+  };
+
+  const getCentroCostoOptions = (selectedValue: string) => {
+    const list = [...centroCostos];
+    if (selectedValue && !list.some(cc => cc.centrocosto === selectedValue)) {
+      list.push({ centrocosto: selectedValue, descripcion: selectedValue });
+    }
+    return list;
+  };
+
+  const resolverCuentaDetalle = async (cuentaCode: string) => {
+    const local = cuentasContables.find(c => c.cuentacontable === cuentaCode);
+    if (local) return local;
+    try {
+      const res = await fetch(`${API_BASE_URL}/cuentacontable/${encodeURIComponent(cuentaCode)}`);
+      if (res.ok) {
+        const data = await res.json();
+        mergeCuentasContables([data]);
+        return data;
+      }
+    } catch {}
+    return null;
+  };
+
+  const validarRelacionCentroCuenta = async (centroCosto: string, cuentaContable: string) => {
+    if (!centroCosto || !cuentaContable) return true;
+    try {
+      const params = new URLSearchParams({ centroCosto, cuentaContable });
+      const res = await fetch(`${API_BASE_URL}/centro-cuenta/validar?${params.toString()}`);
+      if (!res.ok) return false;
+      const data = await res.json();
+      return Boolean(data.valido);
+    } catch {
+      return false;
+    }
+  };
+
+  const fetchCuentasPorCentro = async (centroCosto: string, q = "") => {
+    const params = new URLSearchParams({ limit: "50" });
+    if (q) params.set("q", q);
+    const res = await fetch(
+      `${API_BASE_URL}/centro-cuenta/cuentas-por-centro/${encodeURIComponent(centroCosto)}?${params.toString()}`
+    );
+    if (!res.ok) return [];
+    const list = await res.json();
+    mergeCuentasContables(list);
+    return list;
+  };
+
+  const loadCuentasParaLinea = async (idx: number, centroCosto: string) => {
+    if (!centroCosto) {
+      setCuentasPorLinea(prev => ({ ...prev, [idx]: [] }));
+      return;
+    }
+    const list = await fetchCuentasPorCentro(centroCosto);
+    setCuentasPorLinea(prev => ({ ...prev, [idx]: list }));
+  };
+
+  const getCuentaOptions = (idx: number, centroCosto: string, selectedCuenta: string) => {
+    const list = [...(cuentasPorLinea[idx] || [])];
+    if (selectedCuenta && !list.some(a => a.cuentacontable === selectedCuenta)) {
+      const found = cuentasContables.find(a => a.cuentacontable === selectedCuenta);
+      list.push(found || { cuentacontable: selectedCuenta, descripcion: selectedCuenta });
+    }
+    return list;
+  };
+
+  const mergeCentroCostos = (list: { centrocosto: string; descripcion?: string }[]) => {
+    setCentroCostos(prev => {
+      const next = [...prev];
+      list.forEach(item => {
+        if (!next.some(x => x.centrocosto === item.centrocosto)) next.push(item);
+      });
+      return next;
+    });
+  };
+
+  const mergeCuentasContables = (list: { cuentacontable: string; descripcion?: string }[]) => {
+    setCuentasContables(prev => {
+      const next = [...prev];
+      list.forEach(item => {
+        if (!next.some(x => x.cuentacontable === item.cuentacontable)) next.push(item);
+      });
+      return next;
+    });
+  };
+
+  const handleCuentaContableChange = async (index: number, cuentaCode: string) => {
+    if (!cuentaCode) {
+      setLineas(prev => {
+        const copy = [...prev];
+        copy[index] = { ...copy[index], cuentaContable: "" };
+        return copy;
+      });
+      return;
+    }
+
+    const cuenta = await resolverCuentaDetalle(cuentaCode);
+    if (cuenta && !cuentaAceptaMovimiento(cuenta.aceptadatos)) {
+      toast.error(MSG_CUENTA_NO_MOVIMIENTO);
+      return;
+    }
+
+    setLineas(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], cuentaContable: cuentaCode };
+      return copy;
+    });
+  };
+
+  const handleCentroCostoChange = async (index: number, centroCosto: string) => {
+    const cuentaActual = lineas[index]?.cuentaContable || "";
+
+    setLineas(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], centroCosto };
+      if (!centroCosto) copy[index].cuentaContable = "";
+      return copy;
+    });
+
+    if (!centroCosto) {
+      setCuentasPorLinea(prev => ({ ...prev, [index]: [] }));
+      return;
+    }
+
+    await loadCuentasParaLinea(index, centroCosto);
+
+    if (cuentaActual) {
+      const valido = await validarRelacionCentroCuenta(centroCosto, cuentaActual);
+      if (!valido) {
+        setLineas(prev => {
+          const copy = [...prev];
+          copy[index] = { ...copy[index], cuentaContable: "" };
+          return copy;
+        });
+        toast.warning("La cuenta contable no pertenece al centro de costo seleccionado.");
+      }
+    }
   };
 
   const handleLineaArticuloChange = async (index: number, art: Articulo | null) => {
@@ -139,23 +310,37 @@ export function SolicitudCompraNuevaTab({
     if (art) {
       const resuelto = await resolveCuentasPorArticulo(art.articulo);
       if (resuelto?.cuentaContable) {
-        setLineas(prev => {
-          const copy = [...prev];
-          if (!copy[index].cuentaContable) {
-            copy[index] = { ...copy[index], cuentaContable: resuelto.cuentaContable };
+        const cuentaCode = resuelto.cuentaContable;
+        const centroActual = lineas[index]?.centroCosto || "";
+        const cuenta = await resolverCuentaDetalle(cuentaCode);
+
+        if (cuenta && !cuentaAceptaMovimiento(cuenta.aceptadatos)) {
+          toast.error(MSG_CUENTA_NO_MOVIMIENTO);
+          return;
+        }
+
+        if (centroActual) {
+          const valido = await validarRelacionCentroCuenta(centroActual, cuentaCode);
+          if (valido) {
+            setLineas(prev => {
+              const copy = [...prev];
+              if (!copy[index].cuentaContable) {
+                copy[index] = { ...copy[index], cuentaContable: cuentaCode };
+              }
+              return copy;
+            });
           }
-          return copy;
-        });
+        } else {
+          setLineas(prev => {
+            const copy = [...prev];
+            if (!copy[index].cuentaContable) {
+              copy[index] = { ...copy[index], cuentaContable: cuentaCode };
+            }
+            return copy;
+          });
+        }
       }
     }
-  };
-
-  const getCuentaOptions = (selectedCuenta: string) => {
-    const list = [...cuentasContables];
-    if (selectedCuenta && !list.some(a => a.cuentacontable === selectedCuenta)) {
-      list.push({ cuentacontable: selectedCuenta, descripcion: selectedCuenta });
-    }
-    return list;
   };
 
   const resetForm = () => {
@@ -175,6 +360,23 @@ export function SolicitudCompraNuevaTab({
     const lineasValidas = lineas.filter(l => l.articulo && Number(l.cantidad) > 0);
     if (!departamento) { toast.error("Seleccione un departamento"); return; }
     if (lineasValidas.length === 0) { toast.error("Agregue al menos una línea con artículo y cantidad"); return; }
+
+    for (const linea of lineasValidas) {
+      if (linea.cuentaContable) {
+        const cuenta = await resolverCuentaDetalle(linea.cuentaContable);
+        if (!cuenta || !cuentaAceptaMovimiento(cuenta.aceptadatos)) {
+          toast.error(MSG_CUENTA_NO_MOVIMIENTO);
+          return;
+        }
+      }
+      if (linea.centroCosto && linea.cuentaContable) {
+        const valido = await validarRelacionCentroCuenta(linea.centroCosto, linea.cuentaContable);
+        if (!valido) {
+          toast.error(`La cuenta ${linea.cuentaContable} no pertenece al centro ${linea.centroCosto}.`);
+          return;
+        }
+      }
+    }
 
     setIsSaving(true);
     try {
@@ -197,7 +399,7 @@ export function SolicitudCompraNuevaTab({
           comentario: l.comentario || null,
           centroCosto: l.centroCosto || null,
           cuentaContable: l.cuentaContable || null,
-          fechaRequerida: l.fechaRequerida || fechaRequerida,
+          fechaRequerida,
         })),
       };
 
@@ -223,9 +425,7 @@ export function SolicitudCompraNuevaTab({
         onSaved();
       } else {
         const errText = await res.text();
-        let msg = errText;
-        try { const p = JSON.parse(errText); msg = p.message || msg; } catch {}
-        toast.error(typeof msg === "string" ? msg : "Error al guardar");
+        toast.error(parseApiError(errText) || "Error al guardar");
       }
     } catch (err: any) {
       toast.error(err.message || "Error de red");
@@ -298,70 +498,165 @@ export function SolicitudCompraNuevaTab({
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Líneas de Solicitud</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={() => setLineas(prev => [...prev, { articulo: "", descripcion: "", cantidad: 1, comentario: "", centroCosto: "", cuentaContable: "", fechaRequerida }])}>
-              <Plus className="h-4 w-4 mr-1" /> Agregar línea
-            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {lineas.map((linea, idx) => (
-              <div key={idx} className="grid gap-3 p-4 border rounded-lg bg-slate-50/50 md:grid-cols-6">
-                <div className="md:col-span-2">
-                  <Label>Artículo</Label>
-                  <SelectorRelacionalComboBox
-                    label=""
-                    value={linea.articulo}
-                    options={getSelectOptions(linea.articulo, articulos)}
-                    displayKey="descripcion"
-                    valueKey="articulo"
-                    formatOptionLabel={(item) => `${item.articulo} - ${item.descripcion}`}
-                    onChange={val => {
-                      const art = articulos.find(a => a.articulo === String(val));
-                      handleLineaArticuloChange(idx, art || null);
-                    }}
-                    onSearch={async (q) => {
-                      const res = await fetch(`${API_BASE_URL}/articulo?limit=50&q=${encodeURIComponent(q)}`);
-                      if (res.ok) {
-                        const list = await res.json();
-                        mergeToGlobalArticulos(list);
-                        return list;
-                      }
-                      return [];
-                    }}
-                    placeholder="Buscar artículo..."
+              <div key={idx} className="rounded-lg border bg-slate-50/50 p-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_2.5rem] md:items-end">
+                  <div className="min-w-0">
+                    <Label className="mb-1.5 block">Artículo</Label>
+                    <SelectorRelacionalComboBox
+                      label=""
+                      value={linea.articulo}
+                      options={getSelectOptions(linea.articulo, articulos)}
+                      displayKey="descripcion"
+                      valueKey="articulo"
+                      formatOptionParts={(item) => ({
+                        code: item.articulo,
+                        description: item.descripcion,
+                      })}
+                      onChange={val => {
+                        const art = articulos.find(a => a.articulo === String(val));
+                        handleLineaArticuloChange(idx, art || null);
+                      }}
+                      onSearch={async (q) => {
+                        const res = await fetch(`${API_BASE_URL}/articulo?limit=50&q=${encodeURIComponent(q)}`);
+                        if (res.ok) {
+                          const list = await res.json();
+                          mergeToGlobalArticulos(list);
+                          return list;
+                        }
+                        return [];
+                      }}
+                      placeholder="Buscar artículo..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Cantidad</Label>
+                    <Input
+                      type="number"
+                      min="0.0001"
+                      step="any"
+                      className="px-2 text-center"
+                      value={linea.cantidad}
+                      onChange={e => setLineas(prev => {
+                        const c = [...prev];
+                        c[idx] = { ...c[idx], cantidad: Number(e.target.value) };
+                        return c;
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1.5 block">Saldo</Label>
+                    <Input
+                      type="number"
+                      value={linea.cantidad}
+                      readOnly
+                      className="cursor-not-allowed bg-slate-100 px-2 text-center text-slate-600"
+                      tabIndex={-1}
+                    />
+                  </div>
+                  <div className="flex items-end justify-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10"
+                      onClick={() => setLineas(prev => prev.filter((_, i) => i !== idx))}
+                      disabled={lineas.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="min-w-0">
+                    <Label className="mb-1.5 block">Centro costo</Label>
+                    <SelectorRelacionalComboBox
+                      label=""
+                      value={linea.centroCosto}
+                      options={getCentroCostoOptions(linea.centroCosto)}
+                      displayKey="descripcion"
+                      valueKey="centrocosto"
+                      formatOptionParts={(item) => ({
+                        code: item.centrocosto,
+                        description: item.descripcion,
+                      })}
+                      onChange={val => handleCentroCostoChange(idx, String(val))}
+                      onSearch={async (q) => {
+                        if (linea.cuentaContable) {
+                          const params = new URLSearchParams({ limit: "50" });
+                          if (q) params.set("q", q);
+                          const res = await fetch(
+                            `${API_BASE_URL}/centro-cuenta/centros-por-cuenta/${encodeURIComponent(linea.cuentaContable)}?${params.toString()}`
+                          );
+                          if (res.ok) {
+                            const list = await res.json();
+                            mergeCentroCostos(list);
+                            return list;
+                          }
+                          return [];
+                        }
+                        const res = await fetch(`${API_BASE_URL}/centrocosto/search/${encodeURIComponent(q)}`);
+                        if (res.ok) {
+                          const list = await res.json();
+                          mergeCentroCostos(list);
+                          return list;
+                        }
+                        return [];
+                      }}
+                      placeholder="Buscar centro de costo..."
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <Label className="mb-1.5 block">Cuenta contable</Label>
+                    <SelectorRelacionalComboBox
+                      label=""
+                      value={linea.cuentaContable}
+                      disabled={!linea.centroCosto}
+                      options={getCuentaOptions(idx, linea.centroCosto, linea.cuentaContable)}
+                      displayKey="descripcion"
+                      valueKey="cuentacontable"
+                      formatOptionParts={(item) => ({
+                        code: item.cuentacontable,
+                        description: item.descripcion,
+                      })}
+                      onChange={val => handleCuentaContableChange(idx, String(val))}
+                      onSearch={async (q) => {
+                        if (!linea.centroCosto) return [];
+                        return fetchCuentasPorCentro(linea.centroCosto, q);
+                      }}
+                      placeholder={linea.centroCosto ? "Buscar cuenta contable..." : "Seleccione centro de costo primero"}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <Label className="mb-1.5 block">Comentario línea</Label>
+                  <Input
+                    value={linea.comentario}
+                    onChange={e => setLineas(prev => {
+                      const c = [...prev];
+                      c[idx] = { ...c[idx], comentario: e.target.value };
+                      return c;
+                    })}
                   />
-                </div>
-                <div>
-                  <Label>Cantidad</Label>
-                  <Input type="number" min="0.0001" step="any" value={linea.cantidad} onChange={e => setLineas(prev => { const c = [...prev]; c[idx] = { ...c[idx], cantidad: Number(e.target.value) }; return c; })} />
-                </div>
-                <div>
-                  <Label>Centro Costo</Label>
-                  <NativeSelect value={linea.centroCosto} onChange={e => setLineas(prev => { const c = [...prev]; c[idx] = { ...c[idx], centroCosto: e.target.value }; return c; })}>
-                    <option value="">—</option>
-                    {centroCostos.map(cc => <option key={cc.centrocosto} value={cc.centrocosto}>{cc.centrocosto}</option>)}
-                  </NativeSelect>
-                </div>
-                <div>
-                  <Label>Cuenta contable</Label>
-                  <p className="mb-1 text-[11px] text-slate-500">Sugerida desde inventario; puede cambiarla o dejarla vacía.</p>
-                  <NativeSelect value={linea.cuentaContable} onChange={e => setLineas(prev => { const c = [...prev]; c[idx] = { ...c[idx], cuentaContable: e.target.value }; return c; })}>
-                    <option value="">—</option>
-                    {getCuentaOptions(linea.cuentaContable).map(acc => <option key={acc.cuentacontable} value={acc.cuentacontable}>{acc.cuentacontable}</option>)}
-                  </NativeSelect>
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setLineas(prev => prev.filter((_, i) => i !== idx))} disabled={lineas.length <= 1}>
-                    <Trash2 className="h-4 w-4 text-red-500" />
-                  </Button>
-                </div>
-                <div className="md:col-span-3">
-                  <Label>Comentario línea</Label>
-                  <Input value={linea.comentario} onChange={e => setLineas(prev => { const c = [...prev]; c[idx] = { ...c[idx], comentario: e.target.value }; return c; })} />
                 </div>
               </div>
             ))}
+            <div className="flex justify-start border-t border-border pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLineas(prev => [...prev, { articulo: "", descripcion: "", cantidad: 1, comentario: "", centroCosto: "", cuentaContable: "", fechaRequerida }])}
+              >
+                <Plus className="h-4 w-4 mr-1" /> Agregar línea
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

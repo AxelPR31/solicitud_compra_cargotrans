@@ -8,5 +8,6 @@ import { AuthModule } from '../../auth/auth.module'
   imports: [TenantModule, AuthModule],
   controllers: [CuentacontableController],
   providers: [CuentacontableService],
+  exports: [CuentacontableService],
 })
 export class CuentacontableModule {}

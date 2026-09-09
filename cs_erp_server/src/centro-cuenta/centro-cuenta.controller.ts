@@ -44,6 +44,42 @@ export class CentroCuentaController {
     return this.centroCuentaService.findAll(paginationDto)
   }
 
+  @Get('validar')
+  validar(
+    @Query('centroCosto') centroCosto: string,
+    @Query('cuentaContable') cuentaContable: string,
+  ) {
+    return this.centroCuentaService
+      .existeRelacionActiva(centroCosto, cuentaContable)
+      .then(valido => ({ valido }))
+  }
+
+  @Get('cuentas-por-centro/:centroCosto')
+  findCuentasPorCentro(
+    @Param('centroCosto') centroCosto: string,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.centroCuentaService.findCuentasByCentro(
+      centroCosto,
+      q,
+      limit ? Number(limit) : 50,
+    )
+  }
+
+  @Get('centros-por-cuenta/:cuentaContable')
+  findCentrosPorCuenta(
+    @Param('cuentaContable') cuentaContable: string,
+    @Query('q') q?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.centroCuentaService.findCentrosByCuenta(
+      cuentaContable,
+      q,
+      limit ? Number(limit) : 50,
+    )
+  }
+
   @Get(':centroCosto/:cuentaContable')
   findOne(
     @Param('centroCosto') centroCosto: string,
