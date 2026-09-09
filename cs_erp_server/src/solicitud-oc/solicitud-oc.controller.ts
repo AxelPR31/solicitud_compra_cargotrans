@@ -11,7 +11,7 @@ import {
 import { SolicitudOcService } from './solicitud-oc.service'
 import { CreateSolicitudOcDto } from './dto/create-solicitud-oc.dto'
 import { UpdateSolicitudOcDto } from './dto/update-solicitud-oc.dto'
-import { PaginationDto } from '../common/dto/pagination.dto'
+import { FindSolicitudOcDto } from './dto/find-solicitud-oc.dto'
 
 @Controller('solicitud-oc')
 export class SolicitudOcController {
@@ -23,8 +23,8 @@ export class SolicitudOcController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.solicitudOcService.findAll(paginationDto)
+  findAll(@Query() query: FindSolicitudOcDto) {
+    return this.solicitudOcService.findAll(query)
   }
 
   @Get(':id')

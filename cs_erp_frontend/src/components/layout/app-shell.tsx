@@ -9,16 +9,19 @@ interface AppShellProps {
   activeTab: NavTab;
   onTabChange: (tab: NavTab) => void;
   serverOnline: boolean;
-  title: string;
-  subtitle?: string;
   children: ReactNode;
 }
 
 const tabTitles: Record<NavTab, { title: string; subtitle: string; breadcrumb?: string }> = {
-  "solicitud-compra": {
+  "solicitud-nueva": {
     subtitle: "Módulo de Compras",
-    title: "Solicitud de Compra",
-    breadcrumb: "Solicitud de Compra",
+    title: "Nueva Solicitud de Compra",
+    breadcrumb: "Nueva Solicitud",
+  },
+  "solicitud-historial": {
+    subtitle: "Módulo de Compras",
+    title: "Historial de Solicitudes",
+    breadcrumb: "Historial",
   },
 };
 
@@ -26,8 +29,6 @@ export function AppShell({
   activeTab,
   onTabChange,
   serverOnline,
-  title,
-  subtitle,
   children,
 }: AppShellProps) {
   const pageMeta = tabTitles[activeTab];
@@ -44,8 +45,8 @@ export function AppShell({
       <div className={cn("transition-all duration-300 flex flex-col min-h-screen", isCollapsed ? "pl-20" : "pl-64")}>
         <Header
           serverOnline={serverOnline}
-          title={title || pageMeta.title}
-          subtitle={subtitle || pageMeta.subtitle}
+          title={pageMeta.title}
+          subtitle={pageMeta.subtitle}
           breadcrumb={pageMeta.breadcrumb}
           onToggleSidebar={() => setIsCollapsed(!isCollapsed)}
         />

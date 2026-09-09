@@ -1,9 +1,9 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, History, ChevronLeft, ChevronRight } from "lucide-react";
 
-export type NavTab = "solicitud-compra";
+export type NavTab = "solicitud-nueva" | "solicitud-historial";
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -15,9 +15,10 @@ interface SidebarProps {
 const navItems: {
   id: NavTab;
   label: string;
-  icon: typeof ShoppingCart;
+  icon: typeof FileText;
 }[] = [
-  { id: "solicitud-compra", label: "Solicitud de Compra", icon: ShoppingCart },
+  { id: "solicitud-nueva", label: "Nueva Solicitud", icon: FileText },
+  { id: "solicitud-historial", label: "Historial", icon: History },
 ];
 
 export function Sidebar({
@@ -34,7 +35,7 @@ export function Sidebar({
       )}
     >
       <div className="flex h-16 items-center justify-center border-b border-border transition-all duration-300 px-4">
-        <img src="/maxERP-logo.png" alt="maxERP" className={cn("w-auto object-contain select-none", isCollapsed ? "h-6" : "h-9")} />
+        <img src="/cargotrans.ico" alt="Cargotrans" className={cn("w-auto object-contain select-none", isCollapsed ? "h-8 w-8" : "h-10 w-10")} />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">

@@ -1,4 +1,6 @@
 import { Column, Entity, PrimaryColumn } from 'typeorm'
+import { PrioridadSolicitudOc } from '../types/prioridad-solicitud-oc.type'
+import { EstadoSolicitudOc } from '../types/estado-solicitud-oc.type'
 
 @Entity({ name: 'SOLICITUD_OC', synchronize: false })
 export class SolicitudOc {
@@ -21,13 +23,13 @@ export class SolicitudOc {
   fechaAutorizada: Date
 
   @Column({ name: 'PRIORIDAD', nullable: true })
-  prioridad: string
+  prioridad: PrioridadSolicitudOc
 
   @Column({ name: 'LINEAS_NO_ASIG', type: 'int', nullable: true })
   lineasNoAsig: number
 
   @Column({ name: 'ESTADO' })
-  estado: string
+  estado: EstadoSolicitudOc
 
   @Column({ name: 'COMENTARIO', nullable: true })
   comentario: string

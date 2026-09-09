@@ -10,11 +10,12 @@ import { SolicitudOc } from './entities/solicitud-oc.entity'
 import { SolicitudOcLinea } from '../solicitud-oc-linea/entities/solicitud-oc-linea.entity'
 import { CreateSolicitudOcDto } from './dto/create-solicitud-oc.dto'
 import { UpdateSolicitudOcDto } from './dto/update-solicitud-oc.dto'
-import { PaginationDto } from '../common/dto/pagination.dto'
+import { FindSolicitudOcDto } from './dto/find-solicitud-oc.dto'
 import { GlobalesCoService } from '../globales-co/globales-co.service'
 import { ArticuloCuentaService } from '../articulo-cuenta/articulo-cuenta.service'
 import { DepartamentoService } from '../departamento/departamento.service'
 import { Articulo } from '../articulo/entities/articulo.entity'
+import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
 
 @Injectable()
 export class SolicitudOcService {
@@ -82,7 +83,7 @@ export class SolicitudOcService {
         fechaAutorizada: null,
         prioridad: headerData.prioridad || 'M',
         lineasNoAsig: lineas.length,
-        estado: 'A',
+        estado: 'A' as EstadoSolicitudOc,
         comentario: headerData.comentario || '',
         fechaHora: now,
         usuario,
@@ -168,14 +169,81 @@ export class SolicitudOcService {
     }
   }
 
-  async findAll(paginationDto: PaginationDto) {
-    const { limit = 50, offset = 0 } = paginationDto
-    const headers = await this.repository.find({
-      take: limit,
-      skip: offset,
-      order: { fechaHora: 'DESC' },
-    })
-    return headers
+  async findAll(query: FindSolicitudOcDto) {
+    const {
+      limit = 50,
+      offset = 0,
+      solicitudDesde,
+      solicitudHasta,
+      departamentoDesde,
+      departamentoHasta,
+      fechaSolicitudDesde,
+      fechaSolicitudHasta,
+      fechaRequeridaDesde,
+      fechaRequeridaHasta,
+      prioridades,
+      estados,
+    } = query
+
+    const qb = this.repository
+      .createQueryBuilder('s')
+      .orderBy('s.fechaHora', 'DESC')
+      .addOrderBy('s.createDate', 'DESC')
+      .addOrderBy('s.recordDate', 'DESC')
+      .addOrderBy('s.solicitudOc', 'DESC')
+      .take(limit)
+      .skip(offset)
+
+    if (solicitudDesde) {
+      qb.andWhere('s.solicitudOc >= :solicitudDesde', { solicitudDesde })
+    }
+    if (solicitudHasta) {
+      qb.andWhere('s.solicitudOc <= :solicitudHasta', { solicitudHasta })
+    }
+    if (departamentoDesde) {
+      qb.andWhere('s.departamento >= :departamentoDesde', { departamentoDesde })
+    }
+    if (departamentoHasta) {
+      qb.andWhere('s.departamento <= :departamentoHasta', { departamentoHasta })
+    }
+    if (fechaSolicitudDesde) {
+      qb.andWhere('CAST(s.fechaSolicitud AS DATE) >= :fechaSolicitudDesde', {
+        fechaSolicitudDesde,
+      })
+    }
+    if (fechaSolicitudHasta) {
+      qb.andWhere('CAST(s.fechaSolicitud AS DATE) <= :fechaSolicitudHasta', {
+        fechaSolicitudHasta,
+      })
+    }
+    if (fechaRequeridaDesde) {
+      qb.andWhere('CAST(s.fechaRequerida AS DATE) >= :fechaRequeridaDesde', {
+        fechaRequeridaDesde,
+      })
+    }
+    if (fechaRequeridaHasta) {
+      qb.andWhere('CAST(s.fechaRequerida AS DATE) <= :fechaRequeridaHasta', {
+        fechaRequeridaHasta,
+      })
+    }
+
+    const prioridadList = prioridades
+      ?.split(',')
+      .map(v => v.trim())
+      .filter(Boolean)
+    if (prioridadList?.length) {
+      qb.andWhere('RTRIM(s.prioridad) IN (:...prioridadList)', { prioridadList })
+    }
+
+    const estadoList = estados
+      ?.split(',')
+      .map(v => v.trim())
+      .filter(Boolean)
+    if (estadoList?.length) {
+      qb.andWhere('RTRIM(s.estado) IN (:...estadoList)', { estadoList })
+    }
+
+    return qb.getMany()
   }
 
   async findOne(solicitudOc: string) {
@@ -273,8 +341,8 @@ export class SolicitudOcService {
 
   async cancel(solicitudOc: string, usuario: string) {
     const existing = await this.findOne(solicitudOc)
-    if (existing.estado !== 'A') {
-      throw new BadRequestException('La solicitud ya está cancelada o cerrada.')
+    if (existing.estado === 'O') {
+      throw new BadRequestException('La solicitud ya está cancelada.')
     }
 
     const now = new Date()
@@ -282,7 +350,7 @@ export class SolicitudOcService {
       .createQueryBuilder()
       .update(SolicitudOc)
       .set({
-        estado: 'I',
+        estado: 'O' as EstadoSolicitudOc,
         usuarioCancela: usuario,
         fechaHoraCancela: now,
         recordDate: now,
@@ -294,7 +362,7 @@ export class SolicitudOcService {
     await lineasRepo
       .createQueryBuilder()
       .update(SolicitudOcLinea)
-      .set({ estado: 'I', usuarioCancela: usuario, fechaHoraCancela: now, recordDate: now })
+      .set({ estado: 'O', usuarioCancela: usuario, fechaHoraCancela: now, recordDate: now })
       .where('SOLICITUD_OC = :solicitudOc', { solicitudOc })
       .execute()
 

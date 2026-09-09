@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, ChevronDown, LogOut, Menu, Beef } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -63,11 +63,9 @@ export function Header({
 
         <div className="flex shrink-0 items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 border-r border-slate-200 pr-4 mr-1 select-none">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand/10 text-brand">
-              <Beef className="h-4.5 w-4.5" />
-            </div>
+            <img src="/cargotrans.ico" alt="Cargotrans" className="h-8 w-8 object-contain" />
             <div className="text-left leading-none">
-              <p className="text-xs font-bold text-brand uppercase tracking-wider">Eskimo S.A</p>
+              <p className="text-xs font-bold text-brand uppercase tracking-wider">Cargotrans</p>
               <p className="text-[9px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">Softland</p>
             </div>
           </div>

@@ -15,6 +15,25 @@ export interface Articulo {
   unidadVenta: string
 }
 
+/** Valores Softland: A=Alta, M=Media, Z=Baja */
+export type SolicitudOcPrioridad = 'A' | 'M' | 'Z'
+
+/** Valores Softland: A=Planeada, E=No Asignada, I=Asignada, O=Cancelada */
+export type SolicitudOcEstado = 'A' | 'E' | 'I' | 'O'
+
+export const SOLICITUD_OC_ESTADOS: { value: SolicitudOcEstado; label: string }[] = [
+  { value: 'A', label: 'Planeada' },
+  { value: 'E', label: 'No Asignada' },
+  { value: 'I', label: 'Asignada' },
+  { value: 'O', label: 'Cancelada' },
+]
+
+export const SOLICITUD_OC_PRIORIDADES: { value: SolicitudOcPrioridad; label: string }[] = [
+  { value: 'A', label: 'Alta' },
+  { value: 'M', label: 'Media' },
+  { value: 'Z', label: 'Baja' },
+]
+
 export interface Departamento {
   departamento: string
   descripcion: string
@@ -55,12 +74,14 @@ export interface SolicitudOc {
   fechaRequerida: string
   autorizadaPor?: string
   fechaAutorizada?: string
-  prioridad: string
+  prioridad: SolicitudOcPrioridad
   lineasNoAsig: number
-  estado: string
+  estado: SolicitudOcEstado
   comentario?: string
   fechaHora?: string
   usuario?: string
+  usuarioCancela?: string
+  fechaHoraCancela?: string
   rubro1?: string
   rubro2?: string
   rubro3?: string

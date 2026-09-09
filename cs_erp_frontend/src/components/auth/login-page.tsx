@@ -2,7 +2,6 @@
 
 import { useState, type FormEvent } from 'react'
 import {
-  Fingerprint,
   Loader2,
   Eye,
   EyeOff,
@@ -51,12 +50,12 @@ export default function LoginPage() {
       <div className="w-full max-w-[380px] transition-all duration-300 hover:scale-[1.01]">
         <div className="rounded-2xl border border-border/60 bg-white/90 p-8 shadow-2xl backdrop-blur-md">
           <div className="text-center space-y-3">
-            <div className="mx-auto w-12 h-12 rounded-xl bg-brand/10 flex items-center justify-center shadow-inner">
-              <Fingerprint className="h-6 w-6 text-brand" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center">
+              <img src="/cargotrans.ico" alt="Cargotrans" className="h-16 w-16 object-contain" />
             </div>
             <div>
               <h1 className="font-serif text-2xl font-normal text-brand tracking-wide">
-                Restaurante Eskimo S.A. 
+                Cargotrans
               </h1>
               <p className="text-[13px] text-muted-foreground mt-0.5">
                 Ingresa tus credenciales para continuar

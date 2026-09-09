@@ -1,10 +1,17 @@
+import { IsIn, IsOptional } from 'class-validator'
 import { CreateSolicitudOcLineaDto } from './create-solicitud-oc.dto'
+import {
+  PRIORIDAD_SOLICITUD_OC_VALUES,
+  PrioridadSolicitudOc,
+} from '../types/prioridad-solicitud-oc.type'
 
 export class UpdateSolicitudOcDto {
   departamento?: string
   fechaSolicitud?: Date | string
   fechaRequerida?: Date | string
-  prioridad?: string
+  @IsOptional()
+  @IsIn(PRIORIDAD_SOLICITUD_OC_VALUES)
+  prioridad?: PrioridadSolicitudOc
   comentario?: string
   rubro1?: string
   rubro2?: string

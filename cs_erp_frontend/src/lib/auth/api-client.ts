@@ -2,7 +2,7 @@ import axios from 'axios'
 import { toast } from 'sonner'
 import { useAuthStore } from './store'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://18.191.192.80:7500'
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:7500'
 
 export const api = axios.create({
   baseURL: BASE_URL,

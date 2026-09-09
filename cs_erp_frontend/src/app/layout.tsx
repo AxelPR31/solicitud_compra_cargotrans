@@ -18,8 +18,13 @@ const dmSerif = DM_Serif_Display({
 });
 
 export const metadata: Metadata = {
-  title: "Producción Softland ERP",
-  description: "Módulo de Transformación de Producción",
+  title: "Modulo de Compra",
+  description: "Módulo de Solicitud de Compra Softland",
+  icons: {
+    icon: "/cargotrans.ico",
+    shortcut: "/cargotrans.ico",
+    apple: "/cargotrans.ico",
+  },
 };
 
 export default function RootLayout({

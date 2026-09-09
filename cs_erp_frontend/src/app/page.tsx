@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { AppShell, type NavTab } from '@/components/layout/app-shell'
-import { SolicitudCompraTab } from '@/components/tabs/solicitud-compra-tab'
+import { SolicitudCompraNuevaTab } from '@/components/tabs/solicitud-compra-nueva-tab'
+import { SolicitudCompraHistorialTab } from '@/components/tabs/solicitud-compra-historial-tab'
 import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import LoginPage from '@/components/auth/login-page'
@@ -10,21 +11,23 @@ import LoginPage from '@/components/auth/login-page'
 const fetch = (input: RequestInfo | URL, init?: RequestInit) =>
   globalThis.fetch(input, { ...init, credentials: 'include' });
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://18.191.192.80:7500'
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:7500'
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth()
   const [mounted, setMounted] = useState(false)
-  const [activeTab] = useState<NavTab>('solicitud-compra')
+  const [activeTab, setActiveTab] = useState<NavTab>('solicitud-nueva')
   const [serverOnline, setServerOnline] = useState(false)
   const [articulos, setArticulos] = useState<Articulo[]>([])
+  const [editSolicitudId, setEditSolicitudId] = useState<string | null>(null)
+  const [historialRefreshKey, setHistorialRefreshKey] = useState(0)
 
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     async function checkServer() {
       try {
-        const res = await fetch(`${API_BASE_URL}/tenant/DEFAULT/check`)
+        const res = await fetch(`${API_BASE_URL}/globales-co`)
         setServerOnline(res.ok)
       } catch {
         setServerOnline(false)
@@ -69,6 +72,15 @@ export default function Home() {
     })
   }, [])
 
+  const sharedProps = {
+    articulos,
+    serverOnline,
+    API_BASE_URL,
+    user,
+    getSelectOptions,
+    mergeToGlobalArticulos,
+  }
+
   if (!mounted || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -82,19 +94,30 @@ export default function Home() {
   return (
     <AppShell
       activeTab={activeTab}
-      onTabChange={() => {}}
+      onTabChange={setActiveTab}
       serverOnline={serverOnline}
-      title="Solicitud de Compra"
-      subtitle="Módulo de Compras Softland"
     >
-      <SolicitudCompraTab
-        articulos={articulos}
-        serverOnline={serverOnline}
-        API_BASE_URL={API_BASE_URL}
-        user={user}
-        getSelectOptions={getSelectOptions}
-        mergeToGlobalArticulos={mergeToGlobalArticulos}
-      />
+      {activeTab === 'solicitud-nueva' && (
+        <SolicitudCompraNuevaTab
+          {...sharedProps}
+          editSolicitudId={editSolicitudId}
+          onClearEdit={() => setEditSolicitudId(null)}
+          onSaved={() => {
+            setHistorialRefreshKey(k => k + 1)
+            setActiveTab('solicitud-historial')
+          }}
+        />
+      )}
+      {activeTab === 'solicitud-historial' && (
+        <SolicitudCompraHistorialTab
+          {...sharedProps}
+          refreshKey={historialRefreshKey}
+          onEdit={(id) => {
+            setEditSolicitudId(id)
+            setActiveTab('solicitud-nueva')
+          }}
+        />
+      )}
     </AppShell>
   )
 }
