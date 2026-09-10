@@ -234,7 +234,7 @@ export function SolicitudCompraHistorialTab({
   }) => (
     <div className="space-y-2">
       <Label className="text-xs font-medium text-slate-700">{label}</Label>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <span className="text-[11px] text-slate-400">Desde</span>
           {isDate ? (
@@ -272,17 +272,17 @@ export function SolicitudCompraHistorialTab({
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-border bg-white py-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
+        <CardHeader className="border-b border-border bg-white px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="min-w-0">
               <CardTitle className="text-base">Solicitudes</CardTitle>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-slate-500 break-words">
                 {totalRecords} registro{totalRecords === 1 ? "" : "s"}
                 {selectedId ? ` · seleccionada: ${selectedId}` : ""}
                 {activeFilterCount > 0 ? ` · ${activeFilterCount} filtro${activeFilterCount === 1 ? "" : "s"} activo${activeFilterCount === 1 ? "" : "s"}` : ""}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
               <Button
                 type="button"
                 size="sm"
@@ -299,10 +299,10 @@ export function SolicitudCompraHistorialTab({
                 )}
                 {filtersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
-              <Button type="button" variant="outline" size="sm" onClick={() => fetchHistory(appliedFilters, page)} disabled={loadingHistory}>
+              <Button type="button" variant="outline" size="sm" className="col-span-1" onClick={() => fetchHistory(appliedFilters, page)} disabled={loadingHistory}>
                 <RefreshCw className={cn("h-4 w-4", loadingHistory && "animate-spin")} />
               </Button>
-              <Button type="button" size="sm" disabled={!canEdit} onClick={() => selectedId && onEdit(selectedId)}>
+              <Button type="button" size="sm" className="col-span-1" disabled={!canEdit} onClick={() => selectedId && onEdit(selectedId)}>
                 Editar
               </Button>
               <Button type="button" size="sm" variant="destructive" disabled={!canEdit} onClick={handleCancel}>
@@ -313,7 +313,7 @@ export function SolicitudCompraHistorialTab({
         </CardHeader>
 
         {filtersOpen && (
-          <div className="border-b border-border bg-slate-50/60 px-6 py-5">
+          <div className="border-b border-border bg-slate-50/60 px-4 py-5 sm:px-6">
             <p className="mb-4 text-sm font-medium text-slate-800">Selección de registros</p>
             <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
               <RangeField label="Solicitud" desdeKey="solicitudDesde" hastaKey="solicitudHasta" />
@@ -380,69 +380,119 @@ export function SolicitudCompraHistorialTab({
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px]">
-                <thead className="border-b border-border bg-slate-50/80">
-                  <tr>
-                    <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("solicitudOc")}>
-                      Solicitud <SortIcon column="solicitudOc" />
-                    </th>
-                    <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("departamento")}>
-                      Departamento <SortIcon column="departamento" />
-                    </th>
-                    <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("fechaSolicitud")}>
-                      Fecha solicitud <SortIcon column="fechaSolicitud" />
-                    </th>
-                    <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("fechaRequerida")}>
-                      Fecha requerida <SortIcon column="fechaRequerida" />
-                    </th>
-                    <th className={thClass}>Usuario aprobación</th>
-                    <th className={thClass}>Prioridad</th>
-                    <th className={cn(thClass, "text-right")}>Líneas no asig.</th>
-                    <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("estado")}>
-                      Estado <SortIcon column="estado" />
-                    </th>
-                    <th className={thClass}>Usuario cancelación</th>
-                    <th className={thClass}>Fecha cancelación</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {sortedHistory.map((sol) => {
-                    const isSelected = selectedId === sol.solicitudOc;
-                    return (
-                      <tr
-                        key={sol.solicitudOc}
-                        onClick={() => handleSelect(sol.solicitudOc)}
-                        className={cn(
-                          "cursor-pointer transition-colors",
-                          isSelected
-                            ? "bg-brand/5 ring-1 ring-inset ring-brand/20"
-                            : "hover:bg-slate-50"
-                        )}
-                      >
-                        <td className={cn(tdClass, "font-mono font-medium text-slate-900")}>{sol.solicitudOc}</td>
-                        <td className={tdClass}>{sol.departamento}</td>
-                        <td className={tdClass}>{formatDate(sol.fechaSolicitud)}</td>
-                        <td className={tdClass}>{formatDate(sol.fechaRequerida)}</td>
-                        <td className={cn(tdClass, "text-slate-500")}>{sol.autorizadaPor || "—"}</td>
-                        <td className={tdClass}>{prioridadLabel(sol.prioridad)}</td>
-                        <td className={cn(tdClass, "text-right tabular-nums")}>{sol.lineasNoAsig ?? "—"}</td>
-                        <td className={tdClass}>{estadoBadge(sol.estado)}</td>
-                        <td className={cn(tdClass, "text-slate-500")}>{sol.usuarioCancela || "—"}</td>
-                        <td className={cn(tdClass, "text-slate-500")}>{formatDateTime(sol.fechaHoraCancela) || "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="md:hidden divide-y divide-border">
+                {sortedHistory.map((sol) => {
+                  const isSelected = selectedId === sol.solicitudOc;
+                  return (
+                    <button
+                      key={sol.solicitudOc}
+                      type="button"
+                      onClick={() => handleSelect(sol.solicitudOc)}
+                      className={cn(
+                        "w-full p-4 text-left transition-colors",
+                        isSelected ? "bg-brand/5 ring-1 ring-inset ring-brand/20" : "hover:bg-slate-50",
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-mono text-sm font-medium text-slate-900">{sol.solicitudOc}</span>
+                        {estadoBadge(sol.estado)}
+                      </div>
+                      <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                        <div>
+                          <dt className="text-slate-400">Departamento</dt>
+                          <dd className="text-slate-700">{sol.departamento}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Prioridad</dt>
+                          <dd className="text-slate-700">{prioridadLabel(sol.prioridad)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Fecha solicitud</dt>
+                          <dd className="text-slate-700">{formatDate(sol.fechaSolicitud)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Fecha requerida</dt>
+                          <dd className="text-slate-700">{formatDate(sol.fechaRequerida)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Líneas no asig.</dt>
+                          <dd className="text-slate-700 tabular-nums">{sol.lineasNoAsig ?? "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Aprobación</dt>
+                          <dd className="text-slate-700 truncate">{sol.autorizadaPor || "—"}</dd>
+                        </div>
+                      </dl>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full min-w-[960px]">
+                  <thead className="border-b border-border bg-slate-50/80">
+                    <tr>
+                      <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("solicitudOc")}>
+                        Solicitud <SortIcon column="solicitudOc" />
+                      </th>
+                      <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("departamento")}>
+                        Departamento <SortIcon column="departamento" />
+                      </th>
+                      <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("fechaSolicitud")}>
+                        Fecha solicitud <SortIcon column="fechaSolicitud" />
+                      </th>
+                      <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("fechaRequerida")}>
+                        Fecha requerida <SortIcon column="fechaRequerida" />
+                      </th>
+                      <th className={thClass}>Usuario aprobación</th>
+                      <th className={thClass}>Prioridad</th>
+                      <th className={cn(thClass, "text-right")}>Líneas no asig.</th>
+                      <th className={cn(thClass, "cursor-pointer hover:text-slate-700")} onClick={() => toggleSort("estado")}>
+                        Estado <SortIcon column="estado" />
+                      </th>
+                      <th className={thClass}>Usuario cancelación</th>
+                      <th className={thClass}>Fecha cancelación</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {sortedHistory.map((sol) => {
+                      const isSelected = selectedId === sol.solicitudOc;
+                      return (
+                        <tr
+                          key={sol.solicitudOc}
+                          onClick={() => handleSelect(sol.solicitudOc)}
+                          className={cn(
+                            "cursor-pointer transition-colors",
+                            isSelected
+                              ? "bg-brand/5 ring-1 ring-inset ring-brand/20"
+                              : "hover:bg-slate-50"
+                          )}
+                        >
+                          <td className={cn(tdClass, "font-mono font-medium text-slate-900")}>{sol.solicitudOc}</td>
+                          <td className={tdClass}>{sol.departamento}</td>
+                          <td className={tdClass}>{formatDate(sol.fechaSolicitud)}</td>
+                          <td className={tdClass}>{formatDate(sol.fechaRequerida)}</td>
+                          <td className={cn(tdClass, "text-slate-500")}>{sol.autorizadaPor || "—"}</td>
+                          <td className={tdClass}>{prioridadLabel(sol.prioridad)}</td>
+                          <td className={cn(tdClass, "text-right tabular-nums")}>{sol.lineasNoAsig ?? "—"}</td>
+                          <td className={tdClass}>{estadoBadge(sol.estado)}</td>
+                          <td className={cn(tdClass, "text-slate-500")}>{sol.usuarioCancela || "—"}</td>
+                          <td className={cn(tdClass, "text-slate-500")}>{formatDateTime(sol.fechaHoraCancela) || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
           {!loadingHistory && totalRecords > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
-              <p className="text-xs text-slate-500">
+            <div className="flex flex-col items-stretch justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row sm:items-center">
+              <p className="text-center text-xs text-slate-500 sm:text-left">
                 Mostrando {rangeFrom}–{rangeTo} de {totalRecords}
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-center gap-2">
                 <Button
                   type="button"
                   size="sm"
@@ -472,14 +522,44 @@ export function SolicitudCompraHistorialTab({
 
       {selectedId && selectedDetail && (
         <Card className="overflow-hidden">
-          <CardHeader className="border-b border-border bg-slate-50/50 py-4">
+          <CardHeader className="border-b border-border bg-slate-50/50 px-4 py-4 sm:px-6">
             <CardTitle className="text-base">Líneas de {selectedId}</CardTitle>
             {selectedDetail.comentario && (
-              <p className="text-sm text-slate-500">{selectedDetail.comentario}</p>
+              <p className="text-sm text-slate-500 break-words">{selectedDetail.comentario}</p>
             )}
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="md:hidden divide-y divide-border">
+              {(selectedDetail.lineas || []).length === 0 ? (
+                <p className="px-4 py-8 text-center text-sm text-slate-500">Sin líneas</p>
+              ) : (
+                (selectedDetail.lineas || []).map((l: SolicitudOcLinea) => (
+                  <div key={l.solicitudOcLinea} className="space-y-2 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-400">Línea {l.solicitudOcLinea}</span>
+                      <span className="text-sm font-medium tabular-nums text-slate-900">Cant: {l.cantidad}</span>
+                    </div>
+                    <p className="font-mono text-sm text-slate-900">{l.articulo}</p>
+                    <p className="text-sm text-slate-700">{l.descripcion}</p>
+                    <dl className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                      <div>
+                        <dt className="text-slate-400">Centro costo</dt>
+                        <dd className="text-slate-700">{l.centroCosto || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-slate-400">Cuenta contable</dt>
+                        <dd className="text-slate-700">{l.cuentaContable || "—"}</dd>
+                      </div>
+                    </dl>
+                    {l.comentario && (
+                      <p className="text-xs text-slate-500">{l.comentario}</p>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[720px]">
                 <thead className="border-b border-border bg-slate-50/80">
                   <tr>

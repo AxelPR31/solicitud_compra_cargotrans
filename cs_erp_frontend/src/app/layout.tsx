@@ -27,6 +27,11 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,7 +42,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${dmSerif.variable} font-sans`}>
         <Providers>
           {children}
-          <Toaster position="top-right" />
+          <Toaster position="top-center" />
         </Providers>
       </body>
     </html>

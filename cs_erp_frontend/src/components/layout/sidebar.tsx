@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { FileText, History, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, History, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 export type NavTab = "solicitud-nueva" | "solicitud-historial";
 
@@ -10,6 +10,9 @@ interface SidebarProps {
   onTabChange: (tab: NavTab) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  mobileOpen?: boolean;
+  isMobile?: boolean;
+  onMobileClose?: () => void;
 }
 
 const navItems: {
@@ -26,20 +29,44 @@ export function Sidebar({
   onTabChange,
   isCollapsed,
   onToggleCollapse,
+  mobileOpen = false,
+  isMobile = false,
+  onMobileClose,
 }: SidebarProps) {
+  const showLabels = isMobile || !isCollapsed;
+
   return (
     <aside
       className={cn(
-        "fixed inset-y-0 left-0 z-30 flex flex-col border-r border-border bg-white transition-all duration-300",
-        isCollapsed ? "w-20" : "w-64"
+        "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-white transition-transform duration-300",
+        isMobile
+          ? cn("w-64", mobileOpen ? "translate-x-0" : "-translate-x-full")
+          : cn(isCollapsed ? "w-20" : "w-64"),
       )}
     >
-      <div className="flex h-16 items-center justify-center border-b border-border transition-all duration-300 px-4">
-        <img src="/cargotrans.ico" alt="Cargotrans" className={cn("w-auto object-contain select-none", isCollapsed ? "h-8 w-8" : "h-10 w-10")} />
+      <div className="flex h-16 items-center justify-between border-b border-border px-4">
+        <img
+          src="/cargotrans.ico"
+          alt="Cargotrans"
+          className={cn(
+            "w-auto object-contain select-none",
+            isCollapsed && !isMobile ? "h-8 w-8" : "h-10 w-10",
+          )}
+        />
+        {isMobile && (
+          <button
+            type="button"
+            onClick={onMobileClose}
+            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
+            aria-label="Cerrar menú"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-5">
-        {!isCollapsed && (
+        {showLabels && (
           <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 select-none">
             Módulo de Compras
           </p>
@@ -53,15 +80,15 @@ export function Sidebar({
                 <button
                   type="button"
                   onClick={() => onTabChange(item.id)}
-                  title={isCollapsed ? item.label : undefined}
+                  title={!showLabels ? item.label : undefined}
                   className={cn(
                     "flex w-full items-center rounded-lg py-2.5 text-left text-sm font-medium transition-all duration-200 cursor-pointer outline-none",
-                    isCollapsed ? "justify-center px-0" : "px-3 gap-3",
-                    isActive ? "bg-brand text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
+                    showLabels ? "gap-3 px-3" : "justify-center px-0",
+                    isActive ? "bg-brand text-white shadow-sm" : "text-slate-600 hover:bg-slate-100",
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  {!isCollapsed && <span>{item.label}</span>}
+                  {showLabels && <span>{item.label}</span>}
                 </button>
               </li>
             );
@@ -69,15 +96,18 @@ export function Sidebar({
         </ul>
       </nav>
 
-      <div className="border-t border-border p-3">
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="flex w-full items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition-colors"
-        >
-          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </button>
-      </div>
+      {!isMobile && (
+        <div className="border-t border-border p-3">
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="flex w-full items-center justify-center rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition-colors"
+            aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          >
+            {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

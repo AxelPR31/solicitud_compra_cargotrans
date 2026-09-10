@@ -11,6 +11,7 @@ interface HeaderProps {
   subtitle?: string;
   breadcrumb?: string;
   onToggleSidebar?: () => void;
+  sidebarOpen?: boolean;
 }
 
 const getInitials = (name?: string) => {
@@ -29,39 +30,41 @@ export function Header({
   subtitle,
   breadcrumb,
   onToggleSidebar,
+  sidebarOpen = false,
 }: HeaderProps) {
   const { user, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur-sm">
-      <div className="flex h-16 items-center justify-between px-6">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex h-14 items-center justify-between gap-2 px-4 sm:h-16 sm:gap-3 sm:px-6">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {onToggleSidebar && (
             <button
               type="button"
               onClick={onToggleSidebar}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition-colors cursor-pointer outline-none shrink-0 border border-border bg-white shadow-sm"
-              aria-label="Toggle Sidebar"
+              className="rounded-lg border border-border bg-white p-1.5 text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700 cursor-pointer outline-none shrink-0"
+              aria-label={sidebarOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={sidebarOpen}
             >
               <Menu className="h-5 w-5" />
             </button>
           )}
           <div className="min-w-0">
             {breadcrumb && (
-              <p className="truncate text-xs text-slate-400">{breadcrumb}</p>
+              <p className="truncate text-[11px] text-slate-400 sm:text-xs">{breadcrumb}</p>
             )}
             {!breadcrumb && subtitle && (
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+              <p className="hidden text-xs font-medium uppercase tracking-wide text-slate-400 sm:block">
                 {subtitle}
               </p>
             )}
-            <h1 className="truncate font-serif text-xl font-normal text-brand leading-none">
+            <h1 className="truncate font-serif text-base font-normal text-brand leading-tight sm:text-xl sm:leading-none">
               {title}
             </h1>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <div className="hidden sm:flex items-center gap-2 border-r border-slate-200 pr-4 mr-1 select-none">
             <img src="/cargotrans.ico" alt="Cargotrans" className="h-8 w-8 object-contain" />
             <div className="text-left leading-none">
@@ -72,7 +75,7 @@ export function Header({
 
           <button
             type="button"
-            className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 pointer-events-none opacity-50"
+            className="relative hidden rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 pointer-events-none opacity-50 sm:inline-flex"
             aria-label="Notificaciones"
           >
             <Bell className="h-5 w-5" />
@@ -85,12 +88,12 @@ export function Header({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-3 rounded-lg border border-border px-3 py-1.5 transition-colors hover:bg-slate-50 cursor-pointer outline-none"
+                className="flex items-center gap-2 rounded-lg border border-border px-2 py-1.5 transition-colors hover:bg-slate-50 cursor-pointer outline-none sm:gap-3 sm:px-3"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white shadow-sm">
                   {getInitials(user?.nombre || user?.usuario)}
                 </div>
-                <div className="hidden text-left lg:block">
+                <div className="hidden text-left md:block">
                   <p className="text-sm font-medium text-slate-900 leading-tight">
                     {user?.nombre || user?.usuario || "Usuario"}
                   </p>

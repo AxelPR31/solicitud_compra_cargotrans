@@ -504,8 +504,8 @@ export function SolicitudCompraNuevaTab({
           <CardContent className="space-y-4">
             {lineas.map((linea, idx) => (
               <div key={idx} className="rounded-lg border bg-slate-50/50 p-4">
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_2.5rem] md:items-end">
-                  <div className="min-w-0">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_2.5rem] md:items-end">
+                  <div className="min-w-0 sm:col-span-1 md:col-span-1">
                     <Label className="mb-1.5 block">Artículo</Label>
                     <SelectorRelacionalComboBox
                       label=""
@@ -533,42 +533,45 @@ export function SolicitudCompraNuevaTab({
                       placeholder="Buscar artículo..."
                     />
                   </div>
-                  <div>
-                    <Label className="mb-1.5 block">Cantidad</Label>
-                    <Input
-                      type="number"
-                      min="0.0001"
-                      step="any"
-                      className="px-2 text-center"
-                      value={linea.cantidad}
-                      onChange={e => setLineas(prev => {
-                        const c = [...prev];
-                        c[idx] = { ...c[idx], cantidad: Number(e.target.value) };
-                        return c;
-                      })}
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1.5 block">Saldo</Label>
-                    <Input
-                      type="number"
-                      value={linea.cantidad}
-                      readOnly
-                      className="cursor-not-allowed bg-slate-100 px-2 text-center text-slate-600"
-                      tabIndex={-1}
-                    />
-                  </div>
-                  <div className="flex items-end justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10"
-                      onClick={() => setLineas(prev => prev.filter((_, i) => i !== idx))}
-                      disabled={lineas.length <= 1}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                  <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 sm:contents">
+                    <div>
+                      <Label className="mb-1.5 block">Cantidad</Label>
+                      <Input
+                        type="number"
+                        min="0.0001"
+                        step="any"
+                        className="px-2 text-center"
+                        value={linea.cantidad}
+                        onChange={e => setLineas(prev => {
+                          const c = [...prev];
+                          c[idx] = { ...c[idx], cantidad: Number(e.target.value) };
+                          return c;
+                        })}
+                      />
+                    </div>
+                    <div>
+                      <Label className="mb-1.5 block">Saldo</Label>
+                      <Input
+                        type="number"
+                        value={linea.cantidad}
+                        readOnly
+                        className="cursor-not-allowed bg-slate-100 px-2 text-center text-slate-600"
+                        tabIndex={-1}
+                      />
+                    </div>
+                    <div className="flex items-end justify-end sm:justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        onClick={() => setLineas(prev => prev.filter((_, i) => i !== idx))}
+                        disabled={lineas.length <= 1}
+                        aria-label="Eliminar línea"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -660,12 +663,16 @@ export function SolicitudCompraNuevaTab({
           </CardContent>
         </Card>
 
-        <div className="flex gap-3">
-          <Button type="submit" disabled={isSaving || !serverOnline}>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="submit" className="w-full sm:w-auto" disabled={isSaving || !serverOnline}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
             {editingId ? "Actualizar Solicitud" : "Crear Solicitud"}
           </Button>
-          {editingId && <Button type="button" variant="outline" onClick={resetForm}>Cancelar edición</Button>}
+          {editingId && (
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={resetForm}>
+              Cancelar edición
+            </Button>
+          )}
         </div>
       </form>
     </motion.div>
