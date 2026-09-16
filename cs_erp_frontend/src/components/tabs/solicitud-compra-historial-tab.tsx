@@ -14,7 +14,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { SolicitudOc, SolicitudOcLinea, SolicitudOcEstado, SolicitudOcPrioridad } from "@/lib/types";
 import { SOLICITUD_OC_ESTADOS, SOLICITUD_OC_PRIORIDADES } from "@/lib/types";
-import type { SolicitudCompraTabBaseProps } from "./solicitud-compra-shared";
+import {
+  CS_LINEAS_CENTRO_CUENTA_HABILITADO,
+  type SolicitudCompraTabBaseProps,
+} from "./solicitud-compra-shared";
 import {
   buildHistorialQueryParams,
   countActiveFilters,
@@ -541,16 +544,18 @@ export function SolicitudCompraHistorialTab({
                     </div>
                     <p className="font-mono text-sm text-slate-900">{l.articulo}</p>
                     <p className="text-sm text-slate-700">{l.descripcion}</p>
-                    <dl className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
-                      <div>
-                        <dt className="text-slate-400">Centro costo</dt>
-                        <dd className="text-slate-700">{l.centroCosto || "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-slate-400">Cuenta contable</dt>
-                        <dd className="text-slate-700">{l.cuentaContable || "—"}</dd>
-                      </div>
-                    </dl>
+                    {CS_LINEAS_CENTRO_CUENTA_HABILITADO && (
+                      <dl className="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                        <div>
+                          <dt className="text-slate-400">Centro costo</dt>
+                          <dd className="text-slate-700">{l.centroCosto || "—"}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">Cuenta contable</dt>
+                          <dd className="text-slate-700">{l.cuentaContable || "—"}</dd>
+                        </div>
+                      </dl>
+                    )}
                     {l.comentario && (
                       <p className="text-xs text-slate-500">{l.comentario}</p>
                     )}
@@ -560,15 +565,19 @@ export function SolicitudCompraHistorialTab({
             </div>
 
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full min-w-[720px]">
+              <table className={cn("w-full", CS_LINEAS_CENTRO_CUENTA_HABILITADO ? "min-w-[720px]" : "min-w-[480px]")}>
                 <thead className="border-b border-border bg-slate-50/80">
                   <tr>
                     <th className={thClass}>#</th>
                     <th className={thClass}>Artículo</th>
                     <th className={thClass}>Descripción</th>
                     <th className={cn(thClass, "text-right")}>Cantidad</th>
-                    <th className={thClass}>Centro costo</th>
-                    <th className={thClass}>Cuenta contable</th>
+                    {CS_LINEAS_CENTRO_CUENTA_HABILITADO && (
+                      <>
+                        <th className={thClass}>Centro costo</th>
+                        <th className={thClass}>Cuenta contable</th>
+                      </>
+                    )}
                     <th className={thClass}>Comentario</th>
                   </tr>
                 </thead>
@@ -579,14 +588,18 @@ export function SolicitudCompraHistorialTab({
                       <td className={cn(tdClass, "font-mono text-slate-900")}>{l.articulo}</td>
                       <td className={tdClass}>{l.descripcion}</td>
                       <td className={cn(tdClass, "text-right tabular-nums")}>{l.cantidad}</td>
-                      <td className={tdClass}>{l.centroCosto || "—"}</td>
-                      <td className={tdClass}>{l.cuentaContable || "—"}</td>
+                      {CS_LINEAS_CENTRO_CUENTA_HABILITADO && (
+                        <>
+                          <td className={tdClass}>{l.centroCosto || "—"}</td>
+                          <td className={tdClass}>{l.cuentaContable || "—"}</td>
+                        </>
+                      )}
                       <td className={cn(tdClass, "text-slate-500")}>{l.comentario || "—"}</td>
                     </tr>
                   ))}
                   {(selectedDetail.lineas || []).length === 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-slate-500">Sin líneas</td>
+                      <td colSpan={CS_LINEAS_CENTRO_CUENTA_HABILITADO ? 7 : 5} className="px-4 py-8 text-center text-sm text-slate-500">Sin líneas</td>
                     </tr>
                   )}
                 </tbody>

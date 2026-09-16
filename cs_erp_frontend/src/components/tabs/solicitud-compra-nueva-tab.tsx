@@ -13,7 +13,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Articulo, Departamento, GlobalesCo, SolicitudOcLinea, SolicitudOcPrioridad } from "@/lib/types";
 import { SOLICITUD_OC_PRIORIDADES } from "@/lib/types";
-import type { LineaForm, SolicitudCompraTabBaseProps } from "./solicitud-compra-shared";
+import {
+  CS_LINEAS_CENTRO_CUENTA_HABILITADO,
+  type LineaForm,
+  type SolicitudCompraTabBaseProps,
+} from "./solicitud-compra-shared";
 
 interface SolicitudCompraNuevaTabProps extends SolicitudCompraTabBaseProps {
   editSolicitudId: string | null;
@@ -78,12 +82,21 @@ export function SolicitudCompraNuevaTab({
     async function loadCatalogs() {
       if (!serverOnline) return;
       try {
-        const [depRes, globRes, consRes, ccRes] = await Promise.all([
+        const catalogFetches: Promise<Response>[] = [
           fetch(`${API_BASE_URL}/departamento?activo=S&limit=200`),
           fetch(`${API_BASE_URL}/globales-co`),
           fetch(`${API_BASE_URL}/globales-co/siguiente-solicitud`),
-          fetch(`${API_BASE_URL}/centrocosto?limit=1000`),
-        ]);
+        ];
+        if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+          catalogFetches.push(fetch(`${API_BASE_URL}/centrocosto?limit=1000`));
+        }
+        const results = await Promise.all(catalogFetches);
+        const [depRes, globRes, consRes, ccRes] = [
+          results[0],
+          results[1],
+          results[2],
+          CS_LINEAS_CENTRO_CUENTA_HABILITADO ? results[3] : null,
+        ];
 
         if (depRes.ok) {
           const deps = await depRes.json();
@@ -95,7 +108,7 @@ export function SolicitudCompraNuevaTab({
           const data = await consRes.json();
           setPreviewConsecutivo(data.siguiente);
         }
-        if (ccRes.ok) setCentroCostos(await ccRes.json());
+        if (ccRes?.ok) setCentroCostos(await ccRes.json());
       } catch (err) {
         console.error("Error cargando catálogos", err);
       }
@@ -135,18 +148,20 @@ export function SolicitudCompraNuevaTab({
       }));
       setLineas(lineasEdit);
 
-      const cuentasMap: Record<number, any[]> = {};
-      await Promise.all(
-        lineasEdit.map(async (linea, idx) => {
-          if (!linea.centroCosto) return;
-          const params = new URLSearchParams({ limit: "50" });
-          const ccRes = await fetch(
-            `${API_BASE_URL}/centro-cuenta/cuentas-por-centro/${encodeURIComponent(linea.centroCosto)}?${params.toString()}`
-          );
-          if (ccRes.ok) cuentasMap[idx] = await ccRes.json();
-        })
-      );
-      setCuentasPorLinea(cuentasMap);
+      if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+        const cuentasMap: Record<number, any[]> = {};
+        await Promise.all(
+          lineasEdit.map(async (linea, idx) => {
+            if (!linea.centroCosto) return;
+            const params = new URLSearchParams({ limit: "50" });
+            const ccRes = await fetch(
+              `${API_BASE_URL}/centro-cuenta/cuentas-por-centro/${encodeURIComponent(linea.centroCosto)}?${params.toString()}`
+            );
+            if (ccRes.ok) cuentasMap[idx] = await ccRes.json();
+          })
+        );
+        setCuentasPorLinea(cuentasMap);
+      }
     }
     loadForEdit();
   }, [editSolicitudId, serverOnline, API_BASE_URL]);
@@ -307,7 +322,7 @@ export function SolicitudCompraNuevaTab({
       copy[index] = { ...copy[index], articulo: art.articulo, descripcion: art.descripcion };
       return copy;
     });
-    if (art) {
+    if (art && CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
       const resuelto = await resolveCuentasPorArticulo(art.articulo);
       if (resuelto?.cuentaContable) {
         const cuentaCode = resuelto.cuentaContable;
@@ -361,19 +376,21 @@ export function SolicitudCompraNuevaTab({
     if (!departamento) { toast.error("Seleccione un departamento"); return; }
     if (lineasValidas.length === 0) { toast.error("Agregue al menos una línea con artículo y cantidad"); return; }
 
-    for (const linea of lineasValidas) {
-      if (linea.cuentaContable) {
-        const cuenta = await resolverCuentaDetalle(linea.cuentaContable);
-        if (!cuenta || !cuentaAceptaMovimiento(cuenta.aceptadatos)) {
-          toast.error(MSG_CUENTA_NO_MOVIMIENTO);
-          return;
+    if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+      for (const linea of lineasValidas) {
+        if (linea.cuentaContable) {
+          const cuenta = await resolverCuentaDetalle(linea.cuentaContable);
+          if (!cuenta || !cuentaAceptaMovimiento(cuenta.aceptadatos)) {
+            toast.error(MSG_CUENTA_NO_MOVIMIENTO);
+            return;
+          }
         }
-      }
-      if (linea.centroCosto && linea.cuentaContable) {
-        const valido = await validarRelacionCentroCuenta(linea.centroCosto, linea.cuentaContable);
-        if (!valido) {
-          toast.error(`La cuenta ${linea.cuentaContable} no pertenece al centro ${linea.centroCosto}.`);
-          return;
+        if (linea.centroCosto && linea.cuentaContable) {
+          const valido = await validarRelacionCentroCuenta(linea.centroCosto, linea.cuentaContable);
+          if (!valido) {
+            toast.error(`La cuenta ${linea.cuentaContable} no pertenece al centro ${linea.centroCosto}.`);
+            return;
+          }
         }
       }
     }
@@ -397,8 +414,8 @@ export function SolicitudCompraNuevaTab({
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           comentario: l.comentario || null,
-          centroCosto: l.centroCosto || null,
-          cuentaContable: l.cuentaContable || null,
+          centroCosto: CS_LINEAS_CENTRO_CUENTA_HABILITADO ? l.centroCosto || null : null,
+          cuentaContable: CS_LINEAS_CENTRO_CUENTA_HABILITADO ? l.cuentaContable || null : null,
           fechaRequerida,
         })),
       };
@@ -575,6 +592,7 @@ export function SolicitudCompraNuevaTab({
                   </div>
                 </div>
 
+                {CS_LINEAS_CENTRO_CUENTA_HABILITADO && (
                 <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="min-w-0">
                     <Label className="mb-1.5 block">Centro costo</Label>
@@ -636,6 +654,7 @@ export function SolicitudCompraNuevaTab({
                     />
                   </div>
                 </div>
+                )}
 
                 <div className="mt-3">
                   <Label className="mb-1.5 block">Comentario línea</Label>

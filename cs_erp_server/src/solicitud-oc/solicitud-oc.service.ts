@@ -19,6 +19,9 @@ import { CuentacontableService } from '../mantenimientos/cuenta-contable/cuenta-
 import { Articulo } from '../articulo/entities/articulo.entity'
 import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
 
+/** Si false, centro/cuenta en línea se guardan tal cual (null si no vienen); no se resuelve cuenta por artículo. */
+const CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA = false
+
 @Injectable()
 export class SolicitudOcService {
   private repository: Repository<SolicitudOc>
@@ -149,7 +152,7 @@ export class SolicitudOcService {
 
         const centroCosto = linea.centroCosto || null
         let cuentaContable = linea.cuentaContable || null
-        if (!cuentaContable) {
+        if (!cuentaContable && CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA) {
           const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
           cuentaContable = resuelto.cuentaContable
         }
@@ -331,10 +334,13 @@ export class SolicitudOcService {
 
         for (let i = 0; i < lineas.length; i++) {
           const linea = lineas[i]
-          const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
           const cantidad = Number(linea.cantidad)
           const centroCosto = linea.centroCosto || null
-          const cuentaContable = linea.cuentaContable || resuelto.cuentaContable
+          let cuentaContable = linea.cuentaContable || null
+          if (!cuentaContable && CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA) {
+            const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
+            cuentaContable = resuelto.cuentaContable
+          }
 
           await this.validarCentroCuentaLinea(centroCosto, cuentaContable)
           await this.validarCuentaContableLinea(cuentaContable)
