@@ -62,6 +62,7 @@ export interface SolicitudOcLinea {
   saldo: number
   estado: string
   comentario?: string
+  especificacion?: string
   fechaRequerida?: string
   centroCosto?: string
   cuentaContable?: string
@@ -87,5 +88,9 @@ export interface SolicitudOc {
   rubro3?: string
   rubro4?: string
   rubro5?: string
+  placa?: string
+  chasis?: string
+  marca?: string
+  modelo?: string
   lineas?: SolicitudOcLinea[]
 }

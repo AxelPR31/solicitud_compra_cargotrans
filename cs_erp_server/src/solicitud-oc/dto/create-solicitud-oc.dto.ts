@@ -9,6 +9,7 @@ export class CreateSolicitudOcLineaDto {
   descripcion?: string
   cantidad: number
   comentario?: string
+  especificacion?: string
   fechaRequerida?: Date | string
   centroCosto?: string
   cuentaContable?: string
@@ -30,5 +31,9 @@ export class CreateSolicitudOcDto {
   rubro3?: string
   rubro4?: string
   rubro5?: string
+  placa?: string
+  chasis?: string
+  marca?: string
+  modelo?: string
   lineas: CreateSolicitudOcLineaDto[]
 }

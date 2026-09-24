@@ -15,6 +15,7 @@ import { GlobalesCoModule } from './globales-co/globales-co.module'
 import { DepartamentoModule } from './departamento/departamento.module'
 import { ArticuloCuentaModule } from './articulo-cuenta/articulo-cuenta.module'
 import { SolicitudOcModule } from './solicitud-oc/solicitud-oc.module'
+import { UsuarioSoftlandModule } from './usuario-softland/usuario-softland.module'
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { SolicitudOcModule } from './solicitud-oc/solicitud-oc.module'
     DepartamentoModule,
     ArticuloCuentaModule,
     SolicitudOcModule,
+    UsuarioSoftlandModule,
   ],
   controllers: [AppController],
   providers: [

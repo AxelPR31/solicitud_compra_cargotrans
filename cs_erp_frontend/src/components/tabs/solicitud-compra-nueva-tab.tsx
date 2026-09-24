@@ -14,7 +14,9 @@ import { cn } from "@/lib/utils";
 import type { Articulo, Departamento, GlobalesCo, SolicitudOcLinea, SolicitudOcPrioridad } from "@/lib/types";
 import { SOLICITUD_OC_PRIORIDADES } from "@/lib/types";
 import {
-  CS_LINEAS_CENTRO_CUENTA_HABILITADO,
+  CS_ENCABEZADO_VEHICULO_HABILITADO,
+  CS_LINEAS_CENTRO_COSTO_HABILITADO,
+  CS_LINEAS_CUENTA_CONTABLE_HABILITADO,
   type LineaForm,
   type SolicitudCompraTabBaseProps,
 } from "./solicitud-compra-shared";
@@ -72,10 +74,14 @@ export function SolicitudCompraNuevaTab({
   const [rubro3, setRubro3] = useState("");
   const [rubro4, setRubro4] = useState("");
   const [rubro5, setRubro5] = useState("");
+  const [placa, setPlaca] = useState("");
+  const [chasis, setChasis] = useState("");
+  const [marca, setMarca] = useState("");
+  const [modelo, setModelo] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [lineas, setLineas] = useState<LineaForm[]>([
-    { articulo: "", descripcion: "", cantidad: 1, comentario: "", centroCosto: "", cuentaContable: "", fechaRequerida: new Date().toISOString().split("T")[0] },
+    { articulo: "", descripcion: "", cantidad: 1, comentario: "", especificacion: "", centroCosto: "", cuentaContable: "", fechaRequerida: new Date().toISOString().split("T")[0] },
   ]);
 
   useEffect(() => {
@@ -87,7 +93,7 @@ export function SolicitudCompraNuevaTab({
           fetch(`${API_BASE_URL}/globales-co`),
           fetch(`${API_BASE_URL}/globales-co/siguiente-solicitud`),
         ];
-        if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+        if (CS_LINEAS_CENTRO_COSTO_HABILITADO) {
           catalogFetches.push(fetch(`${API_BASE_URL}/centrocosto?limit=1000`));
         }
         const results = await Promise.all(catalogFetches);
@@ -95,7 +101,7 @@ export function SolicitudCompraNuevaTab({
           results[0],
           results[1],
           results[2],
-          CS_LINEAS_CENTRO_CUENTA_HABILITADO ? results[3] : null,
+          CS_LINEAS_CENTRO_COSTO_HABILITADO ? results[3] : null,
         ];
 
         if (depRes.ok) {
@@ -137,18 +143,23 @@ export function SolicitudCompraNuevaTab({
       setRubro3(detail.rubro3 || "");
       setRubro4(detail.rubro4 || "");
       setRubro5(detail.rubro5 || "");
+      setPlaca(detail.placa || "");
+      setChasis(detail.chasis || "");
+      setMarca(detail.marca || "");
+      setModelo(detail.modelo || "");
       const lineasEdit = (detail.lineas || []).map((l: SolicitudOcLinea) => ({
         articulo: l.articulo,
         descripcion: l.descripcion,
         cantidad: Number(l.cantidad),
         comentario: l.comentario || "",
+        especificacion: l.especificacion || "",
         centroCosto: l.centroCosto || "",
         cuentaContable: l.cuentaContable || "",
         fechaRequerida: l.fechaRequerida ? new Date(l.fechaRequerida).toISOString().split("T")[0] : fechaRequerida,
       }));
       setLineas(lineasEdit);
 
-      if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+      if (CS_LINEAS_CUENTA_CONTABLE_HABILITADO) {
         const cuentasMap: Record<number, any[]> = {};
         await Promise.all(
           lineasEdit.map(async (linea, idx) => {
@@ -322,7 +333,7 @@ export function SolicitudCompraNuevaTab({
       copy[index] = { ...copy[index], articulo: art.articulo, descripcion: art.descripcion };
       return copy;
     });
-    if (art && CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+    if (art && CS_LINEAS_CUENTA_CONTABLE_HABILITADO) {
       const resuelto = await resolveCuentasPorArticulo(art.articulo);
       if (resuelto?.cuentaContable) {
         const cuentaCode = resuelto.cuentaContable;
@@ -367,7 +378,8 @@ export function SolicitudCompraNuevaTab({
     setPrioridad("M");
     setComentario("");
     setRubro1(""); setRubro2(""); setRubro3(""); setRubro4(""); setRubro5("");
-    setLineas([{ articulo: "", descripcion: "", cantidad: 1, comentario: "", centroCosto: "", cuentaContable: "", fechaRequerida: new Date().toISOString().split("T")[0] }]);
+    setPlaca(""); setChasis(""); setMarca(""); setModelo("");
+    setLineas([{ articulo: "", descripcion: "", cantidad: 1, comentario: "", especificacion: "", centroCosto: "", cuentaContable: "", fechaRequerida: new Date().toISOString().split("T")[0] }]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -376,7 +388,7 @@ export function SolicitudCompraNuevaTab({
     if (!departamento) { toast.error("Seleccione un departamento"); return; }
     if (lineasValidas.length === 0) { toast.error("Agregue al menos una línea con artículo y cantidad"); return; }
 
-    if (CS_LINEAS_CENTRO_CUENTA_HABILITADO) {
+    if (CS_LINEAS_CUENTA_CONTABLE_HABILITADO) {
       for (const linea of lineasValidas) {
         if (linea.cuentaContable) {
           const cuenta = await resolverCuentaDetalle(linea.cuentaContable);
@@ -409,13 +421,22 @@ export function SolicitudCompraNuevaTab({
         rubro3: rubro3 || null,
         rubro4: rubro4 || null,
         rubro5: rubro5 || null,
+        ...(CS_ENCABEZADO_VEHICULO_HABILITADO
+          ? {
+              placa: placa || null,
+              chasis: chasis || null,
+              marca: marca || null,
+              modelo: modelo || null,
+            }
+          : {}),
         lineas: lineasValidas.map(l => ({
           articulo: l.articulo,
           descripcion: l.descripcion,
           cantidad: Number(l.cantidad),
           comentario: l.comentario || null,
-          centroCosto: CS_LINEAS_CENTRO_CUENTA_HABILITADO ? l.centroCosto || null : null,
-          cuentaContable: CS_LINEAS_CENTRO_CUENTA_HABILITADO ? l.cuentaContable || null : null,
+          especificacion: l.especificacion || null,
+          centroCosto: CS_LINEAS_CENTRO_COSTO_HABILITADO ? l.centroCosto || null : null,
+          cuentaContable: CS_LINEAS_CUENTA_CONTABLE_HABILITADO ? l.cuentaContable || null : null,
           fechaRequerida,
         })),
       };
@@ -468,7 +489,7 @@ export function SolicitudCompraNuevaTab({
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <Label>Departamento</Label>
+              <Label required>Departamento</Label>
               <NativeSelect value={departamento} onChange={e => setDepartamento(e.target.value)} required>
                 <option value="">Seleccione...</option>
                 {departamentos.map(d => (
@@ -477,21 +498,41 @@ export function SolicitudCompraNuevaTab({
               </NativeSelect>
             </div>
             <div>
-              <Label>Fecha Solicitud</Label>
+              <Label optional>Fecha Solicitud</Label>
               <Input type="date" value={fechaSolicitud} onChange={e => setFechaSolicitud(e.target.value)} />
             </div>
             <div>
-              <Label>Fecha Requerida</Label>
-              <Input type="date" value={fechaRequerida} onChange={e => setFechaRequerida(e.target.value)} />
+              <Label required>Fecha Requerida</Label>
+              <Input type="date" value={fechaRequerida} onChange={e => setFechaRequerida(e.target.value)} required />
             </div>
             <div>
-              <Label>Prioridad</Label>
+              <Label optional>Prioridad</Label>
               <NativeSelect value={prioridad} onChange={e => setPrioridad(e.target.value as SolicitudOcPrioridad)}>
                 {SOLICITUD_OC_PRIORIDADES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
               </NativeSelect>
             </div>
+            {CS_ENCABEZADO_VEHICULO_HABILITADO && (
+              <>
+                <div>
+                  <Label optional>N. Placa</Label>
+                  <Input value={placa} maxLength={150} onChange={e => setPlaca(e.target.value)} />
+                </div>
+                <div>
+                  <Label optional>Chasis</Label>
+                  <Input value={chasis} maxLength={150} onChange={e => setChasis(e.target.value)} />
+                </div>
+                <div>
+                  <Label optional>Marca</Label>
+                  <Input value={marca} maxLength={150} onChange={e => setMarca(e.target.value)} />
+                </div>
+                <div>
+                  <Label optional>Modelo</Label>
+                  <Input value={modelo} maxLength={150} onChange={e => setModelo(e.target.value)} />
+                </div>
+              </>
+            )}
             <div className="md:col-span-2 lg:col-span-3">
-              <Label>Comentario</Label>
+              <Label optional>Comentario</Label>
               <textarea
                 value={comentario}
                 onChange={e => setComentario(e.target.value)}
@@ -504,11 +545,11 @@ export function SolicitudCompraNuevaTab({
             </div>
             {mostrarRubros && (
               <>
-                <div><Label>{globalesCo?.rubro1SolNom || "Rubro 1"}</Label><Input value={rubro1} onChange={e => setRubro1(e.target.value)} /></div>
-                <div><Label>{globalesCo?.rubro2SolNom || "Rubro 2"}</Label><Input value={rubro2} onChange={e => setRubro2(e.target.value)} /></div>
-                <div><Label>{globalesCo?.rubro3SolNom || "Rubro 3"}</Label><Input value={rubro3} onChange={e => setRubro3(e.target.value)} /></div>
-                <div><Label>{globalesCo?.rubro4SolNom || "Rubro 4"}</Label><Input value={rubro4} onChange={e => setRubro4(e.target.value)} /></div>
-                <div><Label>{globalesCo?.rubro5SolNom || "Rubro 5"}</Label><Input value={rubro5} onChange={e => setRubro5(e.target.value)} /></div>
+                <div><Label optional>{globalesCo?.rubro1SolNom || "Rubro 1"}</Label><Input value={rubro1} onChange={e => setRubro1(e.target.value)} /></div>
+                <div><Label optional>{globalesCo?.rubro2SolNom || "Rubro 2"}</Label><Input value={rubro2} onChange={e => setRubro2(e.target.value)} /></div>
+                <div><Label optional>{globalesCo?.rubro3SolNom || "Rubro 3"}</Label><Input value={rubro3} onChange={e => setRubro3(e.target.value)} /></div>
+                <div><Label optional>{globalesCo?.rubro4SolNom || "Rubro 4"}</Label><Input value={rubro4} onChange={e => setRubro4(e.target.value)} /></div>
+                <div><Label optional>{globalesCo?.rubro5SolNom || "Rubro 5"}</Label><Input value={rubro5} onChange={e => setRubro5(e.target.value)} /></div>
               </>
             )}
           </CardContent>
@@ -523,7 +564,7 @@ export function SolicitudCompraNuevaTab({
               <div key={idx} className="rounded-lg border bg-slate-50/50 p-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_5.5rem_5.5rem_2.5rem] md:items-end">
                   <div className="min-w-0 sm:col-span-1 md:col-span-1">
-                    <Label className="mb-1.5 block">Artículo</Label>
+                    <Label className="mb-1.5 block" required>Artículo</Label>
                     <SelectorRelacionalComboBox
                       label=""
                       value={linea.articulo}
@@ -552,7 +593,7 @@ export function SolicitudCompraNuevaTab({
                   </div>
                   <div className="grid grid-cols-[1fr_1fr_auto] items-end gap-2 sm:contents">
                     <div>
-                      <Label className="mb-1.5 block">Cantidad</Label>
+                      <Label className="mb-1.5 block" required>Cantidad</Label>
                       <Input
                         type="number"
                         min="0.0001"
@@ -592,10 +633,14 @@ export function SolicitudCompraNuevaTab({
                   </div>
                 </div>
 
-                {CS_LINEAS_CENTRO_CUENTA_HABILITADO && (
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                {(CS_LINEAS_CENTRO_COSTO_HABILITADO || CS_LINEAS_CUENTA_CONTABLE_HABILITADO) && (
+                <div className={cn(
+                  "mt-3 grid grid-cols-1 gap-3",
+                  CS_LINEAS_CENTRO_COSTO_HABILITADO && CS_LINEAS_CUENTA_CONTABLE_HABILITADO && "md:grid-cols-2",
+                )}>
+                  {CS_LINEAS_CENTRO_COSTO_HABILITADO && (
                   <div className="min-w-0">
-                    <Label className="mb-1.5 block">Centro costo</Label>
+                    <Label className="mb-1.5 block" optional>Centro costo</Label>
                     <SelectorRelacionalComboBox
                       label=""
                       value={linea.centroCosto}
@@ -632,8 +677,10 @@ export function SolicitudCompraNuevaTab({
                       placeholder="Buscar centro de costo..."
                     />
                   </div>
+                  )}
+                  {CS_LINEAS_CUENTA_CONTABLE_HABILITADO && (
                   <div className="min-w-0">
-                    <Label className="mb-1.5 block">Cuenta contable</Label>
+                    <Label className="mb-1.5 block" optional>Cuenta contable</Label>
                     <SelectorRelacionalComboBox
                       label=""
                       value={linea.cuentaContable}
@@ -653,11 +700,25 @@ export function SolicitudCompraNuevaTab({
                       placeholder={linea.centroCosto ? "Buscar cuenta contable..." : "Seleccione centro de costo primero"}
                     />
                   </div>
+                  )}
                 </div>
                 )}
 
                 <div className="mt-3">
-                  <Label className="mb-1.5 block">Comentario línea</Label>
+                  <Label className="mb-1.5 block" optional>Número de parte / especificación</Label>
+                  <Input
+                    value={linea.especificacion}
+                    maxLength={150}
+                    onChange={e => setLineas(prev => {
+                      const c = [...prev];
+                      c[idx] = { ...c[idx], especificacion: e.target.value };
+                      return c;
+                    })}
+                  />
+                </div>
+
+                <div className="mt-3">
+                  <Label className="mb-1.5 block" optional>Comentario línea</Label>
                   <Input
                     value={linea.comentario}
                     onChange={e => setLineas(prev => {
@@ -674,7 +735,7 @@ export function SolicitudCompraNuevaTab({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setLineas(prev => [...prev, { articulo: "", descripcion: "", cantidad: 1, comentario: "", centroCosto: "", cuentaContable: "", fechaRequerida }])}
+                onClick={() => setLineas(prev => [...prev, { articulo: "", descripcion: "", cantidad: 1, comentario: "", especificacion: "", centroCosto: "", cuentaContable: "", fechaRequerida }])}
               >
                 <Plus className="h-4 w-4 mr-1" /> Agregar línea
               </Button>

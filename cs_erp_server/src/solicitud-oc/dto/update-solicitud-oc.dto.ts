@@ -18,5 +18,9 @@ export class UpdateSolicitudOcDto {
   rubro3?: string
   rubro4?: string
   rubro5?: string
+  placa?: string
+  chasis?: string
+  marca?: string
+  modelo?: string
   lineas?: CreateSolicitudOcLineaDto[]
 }

@@ -61,6 +61,18 @@ export class SolicitudOc {
   @Column({ name: 'RUBRO5', nullable: true })
   rubro5: string
 
+  @Column({ name: 'U_PLACA', nullable: true, length: 150 })
+  placa: string
+
+  @Column({ name: 'U_CHASIS', nullable: true, length: 150 })
+  chasis: string
+
+  @Column({ name: 'U_MARCA', nullable: true, length: 150 })
+  marca: string
+
+  @Column({ name: 'U_MODELO', nullable: true, length: 150 })
+  modelo: string
+
   @Column({ name: 'CreatedBy', nullable: true })
   createdBy: string
 

@@ -29,6 +29,9 @@ export class SolicitudOcLinea {
   @Column({ name: 'COMENTARIO', nullable: true })
   comentario: string
 
+  @Column({ name: 'U_ESPECIFICACION', nullable: true, length: 150 })
+  especificacion: string
+
   @Column({ name: 'FECHA_REQUERIDA', type: 'datetime', nullable: true })
   fechaRequerida: Date
 
