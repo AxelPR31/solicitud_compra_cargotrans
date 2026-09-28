@@ -6,7 +6,17 @@ import * as cookieParser from 'cookie-parser'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 import constants from './core/constants'
 
-const { SERVER_PORT } = constants
+const { SERVER_PORT, CORS_ADDITIONAL_ORIGINS } = constants
+
+const CORS_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://18.191.192.80:3000',
+  'http://localhost:7500',
+  'http://18.191.192.80:7500',
+  'https://localhost:3000',
+  ...CORS_ADDITIONAL_ORIGINS,
+]
 
 const EXAMPLE_HTTP_METHODS = [
   'get',
@@ -114,17 +124,10 @@ const organizeSwaggerByResource = (document: any) => {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
-app.enableCors({
-  origin: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://18.191.192.80:3000',
-    'http://localhost:7500',
-    'http://18.191.192.80:7500',
-     'https://localhost:3000',
-  ],
-  credentials: true,
-})
+  app.enableCors({
+    origin: CORS_ORIGINS,
+    credentials: true,
+  })
   app.useGlobalPipes(new ValidationPipe({ transform: true }))
   app.useGlobalFilters(
     new (class {

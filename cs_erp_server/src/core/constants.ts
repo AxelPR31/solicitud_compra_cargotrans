@@ -10,6 +10,10 @@ const constants = {
   SOFTLAND_DECRYPT_TIMEOUT_MS: Number(
     process.env.SOFTLAND_DECRYPT_TIMEOUT_MS ?? 3000,
   ),
+  CORS_ADDITIONAL_ORIGINS: (process.env.CORS_ADDITIONAL_ORIGIN ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0),
 }
 
 export default constants
