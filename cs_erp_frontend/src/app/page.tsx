@@ -7,11 +7,10 @@ import { SolicitudCompraHistorialTab } from '@/components/tabs/solicitud-compra-
 import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import LoginPage from '@/components/auth/login-page'
+import { API_BASE_URL } from '@/lib/api-base-url'
 
 const fetch = (input: RequestInfo | URL, init?: RequestInit) =>
   globalThis.fetch(input, { ...init, credentials: 'include' });
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:7500'
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth()

@@ -1,11 +1,10 @@
 import axios from 'axios'
 import { toast } from 'sonner'
+import { API_BASE_URL } from '@/lib/api-base-url'
 import { useAuthStore } from './store'
 
-const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:7500'
-
 export const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   withCredentials: true,
 })
 

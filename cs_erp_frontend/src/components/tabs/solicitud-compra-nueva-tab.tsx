@@ -128,8 +128,9 @@ export function SolicitudCompraNuevaTab({
 
   useEffect(() => {
     if (!editSolicitudId || !serverOnline) return;
+    const solicitudId: string = editSolicitudId;
     async function loadForEdit() {
-      const res = await fetch(`${API_BASE_URL}/solicitud-oc/${encodeURIComponent(editSolicitudId)}`);
+      const res = await fetch(`${API_BASE_URL}/solicitud-oc/${encodeURIComponent(solicitudId)}`);
       if (!res.ok) return;
       const detail = await res.json();
       setEditingId(detail.solicitudOc);
@@ -147,7 +148,7 @@ export function SolicitudCompraNuevaTab({
       setChasis(detail.chasis || "");
       setMarca(detail.marca || "");
       setModelo(detail.modelo || "");
-      const lineasEdit = (detail.lineas || []).map((l: SolicitudOcLinea) => ({
+      const lineasEdit: LineaForm[] = (detail.lineas || []).map((l: SolicitudOcLinea) => ({
         articulo: l.articulo,
         descripcion: l.descripcion,
         cantidad: Number(l.cantidad),
