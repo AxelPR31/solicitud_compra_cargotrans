@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common'
-import { PaginationDto } from '../common/dto/pagination.dto'
+import { FindArticuloDto } from './dto/find-articulo.dto'
 import { CreateArticuloDto } from './dto/create-articulo.dto'
 import { UpdateArticuloDto } from './dto/update-articulo.dto'
 import { ArticuloService } from './articulo.service'
@@ -26,8 +26,8 @@ export class ArticuloController {
   }
 
   @Get()
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.articuloService.findAll(paginationDto)
+  findAll(@Query() query: FindArticuloDto) {
+    return this.articuloService.findAll(query)
   }
 
   @Get(':articulo')

@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { DataSource, Repository, Like } from 'typeorm'
+import { DataSource, Repository } from 'typeorm'
 import { TENANT_CONENCTION } from '../tenant/tenant.module'
 import { Articulo } from './entities/articulo.entity'
 import { CreateArticuloDto } from './dto/create-articulo.dto'
 import { UpdateArticuloDto } from './dto/update-articulo.dto'
-import { PaginationDto } from '../common/dto/pagination.dto'
+import { FindArticuloDto } from './dto/find-articulo.dto'
+import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
 
 @Injectable()
 export class ArticuloService {
@@ -23,25 +24,27 @@ export class ArticuloService {
       .execute()
   }
 
-  async findAll(paginationDto: PaginationDto & { q?: string }) {
-    const { limit = 10, offset = 0, q } = paginationDto
-    
-    if (q) {
-      return this.repository.find({
-        where: [
-          { articulo: Like(`%${q}%`), activo: 'S' },
-          { descripcion: Like(`%${q}%`), activo: 'S' },
-        ],
-        take: limit,
-        skip: offset,
+  async findAll(paginationDto: FindArticuloDto) {
+    const { limit = 10, offset = 0, q, prefix } = paginationDto
+
+    const qb = this.repository
+      .createQueryBuilder('a')
+      .where('a.activo = :activo', { activo: 'S' })
+
+    if (prefix?.trim()) {
+      qb.andWhere('UPPER(a.articulo) LIKE UPPER(:prefixLike)', {
+        prefixLike: `${escapeMsSqlLike(prefix.trim())}%`,
       })
     }
 
-    return this.repository.find({
-      where: { activo: 'S' },
-      take: limit,
-      skip: offset,
-    })
+    if (q?.trim()) {
+      qb.andWhere(
+        '(a.articulo LIKE :qLike OR a.descripcion LIKE :qLike)',
+        { qLike: `%${escapeMsSqlLike(q.trim())}%` },
+      )
+    }
+
+    return qb.take(limit).skip(offset).getMany()
   }
 
   findOne(articulo: string) {

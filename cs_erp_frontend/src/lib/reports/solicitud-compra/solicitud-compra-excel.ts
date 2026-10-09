@@ -166,10 +166,8 @@ export async function downloadSolicitudCompraExcel(
   ws.getRow(2).height = 22;
 
   const datosHeader = 4;
-  const headers = ["Datos", "", "N. PLACA", "CHASIS", "MARCA", "MODELO"];
-  headers.forEach((h, i) => {
-    ws.getCell(datosHeader, i + 1).value = h;
-  });
+  ws.mergeCells(datosHeader, 1, datosHeader, 2);
+  ws.getCell(datosHeader, 1).value = "Datos";
   styleHeaderRow(ws.getRow(datosHeader));
 
   const datosRows = [
@@ -180,18 +178,6 @@ export async function downloadSolicitudCompraExcel(
     ["PRIORIDAD:", model.prioridad],
   ];
   const datosStart = datosHeader + 1;
-  ws.mergeCells(datosStart, 3, datosStart + datosRows.length - 1, 3);
-  ws.mergeCells(datosStart, 4, datosStart + datosRows.length - 1, 4);
-  ws.mergeCells(datosStart, 5, datosStart + datosRows.length - 1, 5);
-  ws.mergeCells(datosStart, 6, datosStart + datosRows.length - 1, 6);
-  ws.getCell(datosStart, 3).value = model.vehiculo.placa;
-  ws.getCell(datosStart, 4).value = model.vehiculo.chasis;
-  ws.getCell(datosStart, 5).value = model.vehiculo.marca;
-  ws.getCell(datosStart, 6).value = model.vehiculo.modelo;
-  for (const col of [3, 4, 5, 6]) {
-    ws.getCell(datosStart, col).alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-    ws.getCell(datosStart, col).font = { size: 9 };
-  }
 
   datosRows.forEach((row, idx) => {
     const r = datosStart + idx;
@@ -199,7 +185,7 @@ export async function downloadSolicitudCompraExcel(
     ws.getCell(r, 1).font = { bold: true, size: 9 };
     ws.getCell(r, 2).value = row[1];
     ws.getCell(r, 2).alignment = { vertical: "middle", wrapText: true };
-    for (let c = 1; c <= 6; c++) {
+    for (let c = 1; c <= 2; c++) {
       ws.getCell(r, c).border = {
         top: { style: "thin" },
         left: { style: "thin" },

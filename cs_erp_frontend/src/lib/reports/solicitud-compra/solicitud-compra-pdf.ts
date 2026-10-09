@@ -64,7 +64,6 @@ function padLineas(model: CS_ReportSolicitudCompraModel) {
 }
 
 function buildDatosRows(model: CS_ReportSolicitudCompraModel): Content[][] {
-  const v = model.vehiculo;
   const rows: { label: string; value: string }[] = [
     { label: "SOLICITADO:", value: model.solicitado },
     { label: "REQUERIDO:", value: model.requerido },
@@ -72,13 +71,9 @@ function buildDatosRows(model: CS_ReportSolicitudCompraModel): Content[][] {
     { label: "GERENCIA:", value: model.gerencia },
     { label: "PRIORIDAD:", value: model.prioridad },
   ];
-  return rows.map((r, index) => [
+  return rows.map(r => [
     { text: r.label, bold: true, fontSize: 8, margin: [2, 2, 2, 2] },
     { text: r.value, fontSize: 8, margin: [2, 2, 2, 2] },
-    { text: index === 0 ? v.placa : "", fontSize: 8, margin: [2, 2, 2, 2] },
-    { text: index === 0 ? v.chasis : "", fontSize: 8, margin: [2, 2, 2, 2] },
-    { text: index === 0 ? v.marca : "", fontSize: 8, margin: [2, 2, 2, 2] },
-    { text: index === 0 ? v.modelo : "", fontSize: 8, margin: [2, 2, 2, 2] },
   ]);
 }
 
@@ -205,15 +200,11 @@ function buildDocDefinition(model: CS_ReportSolicitudCompraModel, logo?: string)
       },
       {
         table: {
-          widths: [95, "*", 52, 52, 52, 52],
+          widths: [95, "*"],
           body: [
             [
-              { text: "Datos", style: "tableHeader", alignment: "center" },
-              { text: "", style: "tableHeader" },
-              { text: "N. PLACA", style: "tableHeader", alignment: "center" },
-              { text: "CHASIS", style: "tableHeader", alignment: "center" },
-              { text: "MARCA", style: "tableHeader", alignment: "center" },
-              { text: "MODELO", style: "tableHeader", alignment: "center" },
+              { text: "Datos", style: "tableHeader", colSpan: 2, alignment: "center" },
+              {},
             ],
             ...buildDatosRows(model),
           ],

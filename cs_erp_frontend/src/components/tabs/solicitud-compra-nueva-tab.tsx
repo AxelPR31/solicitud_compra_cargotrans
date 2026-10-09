@@ -10,13 +10,15 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { SelectorRelacionalComboBox } from "@/components/ui/selector-relacional-combobox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import type { Articulo, Departamento, GlobalesCo, SolicitudOcLinea, SolicitudOcPrioridad } from "@/lib/types";
+import { cn, todayDateInNicaragua, toDateInputValueInNicaragua } from "@/lib/utils";
+import type { Articulo, Departamento, GlobalesCo, SolicitudOcPrioridad } from "@/lib/types";
 import { SOLICITUD_OC_PRIORIDADES } from "@/lib/types";
 import {
+  buildArticuloSolicitudQuery,
   CS_ENCABEZADO_VEHICULO_HABILITADO,
   CS_LINEAS_CENTRO_COSTO_HABILITADO,
   CS_LINEAS_CUENTA_CONTABLE_HABILITADO,
+  filterArticulosSolicitudCompra,
   type LineaForm,
   type SolicitudCompraTabBaseProps,
 } from "./solicitud-compra-shared";
@@ -59,13 +61,12 @@ export function SolicitudCompraNuevaTab({
   const [isSaving, setIsSaving] = useState(false);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [globalesCo, setGlobalesCo] = useState<GlobalesCo | null>(null);
-  const [previewConsecutivo, setPreviewConsecutivo] = useState("SC00000001");
   const [centroCostos, setCentroCostos] = useState<any[]>([]);
   const [cuentasContables, setCuentasContables] = useState<any[]>([]);
   const [cuentasPorLinea, setCuentasPorLinea] = useState<Record<number, any[]>>({});
 
   const [departamento, setDepartamento] = useState("");
-  const [fechaSolicitud, setFechaSolicitud] = useState(new Date().toISOString().split("T")[0]);
+  const [fechaSolicitud, setFechaSolicitud] = useState(() => todayDateInNicaragua());
   const [fechaRequerida, setFechaRequerida] = useState(new Date().toISOString().split("T")[0]);
   const [prioridad, setPrioridad] = useState<SolicitudOcPrioridad>("M");
   const [comentario, setComentario] = useState("");
@@ -78,7 +79,7 @@ export function SolicitudCompraNuevaTab({
   const [chasis, setChasis] = useState("");
   const [marca, setMarca] = useState("");
   const [modelo, setModelo] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingCsId, setEditingCsId] = useState<number | null>(null);
 
   const [lineas, setLineas] = useState<LineaForm[]>([
     { articulo: "", descripcion: "", cantidad: 1, comentario: "", especificacion: "", centroCosto: "", cuentaContable: "", fechaRequerida: new Date().toISOString().split("T")[0] },
@@ -91,17 +92,15 @@ export function SolicitudCompraNuevaTab({
         const catalogFetches: Promise<Response>[] = [
           fetch(`${API_BASE_URL}/departamento?activo=S&limit=200`),
           fetch(`${API_BASE_URL}/globales-co`),
-          fetch(`${API_BASE_URL}/globales-co/siguiente-solicitud`),
         ];
         if (CS_LINEAS_CENTRO_COSTO_HABILITADO) {
           catalogFetches.push(fetch(`${API_BASE_URL}/centrocosto?limit=1000`));
         }
         const results = await Promise.all(catalogFetches);
-        const [depRes, globRes, consRes, ccRes] = [
+        const [depRes, globRes, ccRes] = [
           results[0],
           results[1],
-          results[2],
-          CS_LINEAS_CENTRO_COSTO_HABILITADO ? results[3] : null,
+          CS_LINEAS_CENTRO_COSTO_HABILITADO ? results[2] : null,
         ];
 
         if (depRes.ok) {
@@ -110,10 +109,6 @@ export function SolicitudCompraNuevaTab({
           if (deps.length > 0 && !departamento) setDepartamento(deps[0].departamento);
         }
         if (globRes.ok) setGlobalesCo(await globRes.json());
-        if (consRes.ok) {
-          const data = await consRes.json();
-          setPreviewConsecutivo(data.siguiente);
-        }
         if (ccRes?.ok) setCentroCostos(await ccRes.json());
       } catch (err) {
         console.error("Error cargando catálogos", err);
@@ -127,15 +122,16 @@ export function SolicitudCompraNuevaTab({
   }, [fechaRequerida]);
 
   useEffect(() => {
-    if (!editSolicitudId || !serverOnline) return;
-    const solicitudId: string = editSolicitudId;
+    if (!editSolicitudId?.startsWith("cs:") || !serverOnline) return;
+    const csId = parseInt(editSolicitudId.slice(3), 10);
+    if (Number.isNaN(csId)) return;
     async function loadForEdit() {
-      const res = await fetch(`${API_BASE_URL}/solicitud-oc/${encodeURIComponent(solicitudId)}`);
+      const res = await fetch(`${API_BASE_URL}/cs-solicitud-oc/${csId}`);
       if (!res.ok) return;
       const detail = await res.json();
-      setEditingId(detail.solicitudOc);
+      setEditingCsId(detail.id);
       setDepartamento(detail.departamento);
-      setFechaSolicitud(detail.fechaSolicitud ? new Date(detail.fechaSolicitud).toISOString().split("T")[0] : "");
+      setFechaSolicitud(toDateInputValueInNicaragua(detail.fechaSolicitud));
       setFechaRequerida(detail.fechaRequerida ? new Date(detail.fechaRequerida).toISOString().split("T")[0] : "");
       setPrioridad(detail.prioridad ?? "M");
       setComentario(detail.comentario || "");
@@ -148,7 +144,16 @@ export function SolicitudCompraNuevaTab({
       setChasis(detail.chasis || "");
       setMarca(detail.marca || "");
       setModelo(detail.modelo || "");
-      const lineasEdit: LineaForm[] = (detail.lineas || []).map((l: SolicitudOcLinea) => ({
+      const lineasEdit: LineaForm[] = (detail.lineas || []).map((l: {
+        articulo: string;
+        descripcion?: string;
+        cantidad: number;
+        comentario?: string;
+        especificacion?: string;
+        centroCosto?: string;
+        cuentaContable?: string;
+        fechaRequerida?: string;
+      }) => ({
         articulo: l.articulo,
         descripcion: l.descripcion,
         cantidad: Number(l.cantidad),
@@ -371,10 +376,10 @@ export function SolicitudCompraNuevaTab({
   };
 
   const resetForm = () => {
-    setEditingId(null);
+    setEditingCsId(null);
     onClearEdit();
     setDepartamento(departamentos[0]?.departamento || "");
-    setFechaSolicitud(new Date().toISOString().split("T")[0]);
+    setFechaSolicitud(todayDateInNicaragua());
     setFechaRequerida(new Date().toISOString().split("T")[0]);
     setPrioridad("M");
     setComentario("");
@@ -412,7 +417,7 @@ export function SolicitudCompraNuevaTab({
     try {
       const payload = {
         departamento,
-        fechaSolicitud,
+        fechaSolicitud: editingCsId ? fechaSolicitud : todayDateInNicaragua(),
         fechaRequerida,
         prioridad,
         comentario,
@@ -442,10 +447,10 @@ export function SolicitudCompraNuevaTab({
         })),
       };
 
-      const url = editingId
-        ? `${API_BASE_URL}/solicitud-oc/${encodeURIComponent(editingId)}`
-        : `${API_BASE_URL}/solicitud-oc`;
-      const method = editingId ? "PATCH" : "POST";
+      const url = editingCsId
+        ? `${API_BASE_URL}/cs-solicitud-oc/${editingCsId}`
+        : `${API_BASE_URL}/cs-solicitud-oc`;
+      const method = editingCsId ? "PATCH" : "POST";
 
       const res = await fetch(url, {
         method,
@@ -454,13 +459,13 @@ export function SolicitudCompraNuevaTab({
       });
 
       if (res.ok) {
-        toast.success(editingId ? "Solicitud actualizada" : `Solicitud creada: ${previewConsecutivo}`);
+        const saved = await res.json();
+        toast.success(
+          editingCsId
+            ? "Solicitud actualizada"
+            : `Solicitud #${saved.id} registrada. Queda planeada hasta aprobar.`,
+        );
         resetForm();
-        const consRes = await fetch(`${API_BASE_URL}/globales-co/siguiente-solicitud`);
-        if (consRes.ok) {
-          const data = await consRes.json();
-          setPreviewConsecutivo(data.siguiente);
-        }
         onSaved();
       } else {
         const errText = await res.text();
@@ -482,10 +487,13 @@ export function SolicitudCompraNuevaTab({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-brand" />
-              {editingId ? `Editar ${editingId}` : "Nueva Solicitud de Compra"}
+              {editingCsId ? `Editar solicitud #${editingCsId}` : "Nueva Solicitud de Compra"}
             </CardTitle>
             <CardDescription>
-              Consecutivo: <span className="font-mono font-semibold text-brand">{editingId || previewConsecutivo}</span>
+              Referencia:{" "}
+              <span className="font-mono font-semibold text-brand">
+                {editingCsId ? `#${editingCsId}` : "Se asigna consecutivo Softland al aprobar"}
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -500,7 +508,13 @@ export function SolicitudCompraNuevaTab({
             </div>
             <div>
               <Label optional>Fecha Solicitud</Label>
-              <Input type="date" value={fechaSolicitud} onChange={e => setFechaSolicitud(e.target.value)} />
+              <Input
+                type="date"
+                value={fechaSolicitud}
+                readOnly
+                disabled
+                className="bg-muted text-muted-foreground cursor-not-allowed"
+              />
             </div>
             <div>
               <Label required>Fecha Requerida</Label>
@@ -581,9 +595,13 @@ export function SolicitudCompraNuevaTab({
                         handleLineaArticuloChange(idx, art || null);
                       }}
                       onSearch={async (q) => {
-                        const res = await fetch(`${API_BASE_URL}/articulo?limit=50&q=${encodeURIComponent(q)}`);
+                        const res = await fetch(
+                          `${API_BASE_URL}/articulo?${buildArticuloSolicitudQuery({ limit: 50, q })}`,
+                        );
                         if (res.ok) {
-                          const list = await res.json();
+                          const list = filterArticulosSolicitudCompra(
+                            (await res.json()) as Articulo[],
+                          );
                           mergeToGlobalArticulos(list);
                           return list;
                         }
@@ -747,9 +765,9 @@ export function SolicitudCompraNuevaTab({
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button type="submit" className="w-full sm:w-auto" disabled={isSaving || !serverOnline}>
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
-            {editingId ? "Actualizar Solicitud" : "Crear Solicitud"}
+            {editingCsId ? "Actualizar Solicitud" : "Crear Solicitud"}
           </Button>
-          {editingId && (
+          {editingCsId && (
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={resetForm}>
               Cancelar edición
             </Button>

@@ -5,6 +5,14 @@ import { DataSource, Repository } from 'typeorm'
 import { Centrocosto } from './entities/centrocosto.entity'
 import { TENANT_CONENCTION } from '../../tenant/tenant.module'
 import { PageOptionsDto } from '../../core/paging/dtos/page-options.dto'
+import { resolveSortColumn } from '../../core/sql/resolve-sort-column'
+import { escapeMsSqlLike } from '../../core/sql/escape-ms-sql-like'
+
+const CENTRO_COSTO_SORT_COLUMNS = [
+  'centrocosto',
+  'descripcion',
+  'aceptadatos',
+] as const
 import { PageDto } from '../../core/paging/dtos/page.dto'
 import { PageMetaDto } from '../../core/paging/dtos/page-meta.dto'
 import { PaginationDto } from '../../common/dto/pagination.dto'
@@ -45,7 +53,7 @@ export class CentrocostoService {
       .where(
         'CENTRO_COSTO like :searchValue or ACEPTA_DATOS like :searchValue or descripcion like :searchValue ',
         {
-          searchValue: `%${searchValue}%`,
+          searchValue: `%${escapeMsSqlLike(searchValue)}%`,
         },
       )
       .getMany()
@@ -54,10 +62,12 @@ export class CentrocostoService {
     pageOptionsDto: PageOptionsDto,
   ): Promise<PageDto<Centrocosto>> {
     const qb = this.repository.createQueryBuilder('centrocosto')
-    qb.orderBy(
-      `centrocosto.${pageOptionsDto.property ?? 'centrocosto'}`,
-      pageOptionsDto.order,
+    const sortCol = resolveSortColumn(
+      CENTRO_COSTO_SORT_COLUMNS,
+      pageOptionsDto.property,
+      'centrocosto',
     )
+    qb.orderBy(`centrocosto.${sortCol}`, pageOptionsDto.order)
       .skip(pageOptionsDto.skip)
       .take(pageOptionsDto.take)
 

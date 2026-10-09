@@ -8,7 +8,7 @@ import {
   Logger,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
-import { Request } from 'express'
+import { Request, Response } from 'express'
 import { JwtPayload } from 'jsonwebtoken'
 import { TENANT_CONENCTION } from 'src/tenant/tenant.module'
 import { UsuarioSoftland } from 'src/usuario-softland/entities/usuario-softland.entity'
@@ -41,6 +41,7 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest() as Request
+    const response = context.switchToHttp().getResponse<Response>()
     const handler = context.getHandler()
     const controller = context.getClass()
 
@@ -127,6 +128,7 @@ export class AuthGuard implements CanActivate {
       )
 
       if (isTokenExpired) {
+        response.clearCookie(constants.AUTH_KEY)
         throw new HttpException(
           {
             message: 'Sesión expirada. Por favor, inicie sesión nuevamente.',

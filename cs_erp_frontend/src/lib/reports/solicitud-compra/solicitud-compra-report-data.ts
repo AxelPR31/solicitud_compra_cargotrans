@@ -11,13 +11,6 @@ export interface CS_ReportLineaSolicitud {
   centroCosto: string;
 }
 
-export interface CS_ReportVehiculoPlaceholder {
-  placa: string;
-  chasis: string;
-  marca: string;
-  modelo: string;
-}
-
 export interface CS_ReportSolicitudCompraModel {
   numeroDocumento: string;
   solicitado: string;
@@ -25,7 +18,6 @@ export interface CS_ReportSolicitudCompraModel {
   fechaSolicitud: string;
   gerencia: string;
   prioridad: string;
-  vehiculo: CS_ReportVehiculoPlaceholder;
   lineas: CS_ReportLineaSolicitud[];
   observaciones: string;
 }
@@ -134,12 +126,6 @@ export async function buildCSReportSolicitudCompraModel(
     fechaSolicitud: formatDate(detail.fechaSolicitud),
     gerencia,
     prioridad: prioridadLabel(detail.prioridad),
-    vehiculo: {
-      placa: detail.placa?.trim() || "",
-      chasis: detail.chasis?.trim() || "",
-      marca: detail.marca?.trim() || "",
-      modelo: detail.modelo?.trim() || "",
-    },
     lineas,
     observaciones: detail.comentario?.trim() || "",
   };

@@ -34,6 +34,8 @@ interface Props {
   maxLabelLength?: number
   disabled?: boolean
   onSearch?: (search: string) => Promise<Item[]> | any
+  /** En el botón cerrado muestra solo el código (evita cortar descripciones largas). */
+  preferCodeInTrigger?: boolean
 }
 
 export function SelectorRelacionalComboBox({
@@ -52,6 +54,7 @@ export function SelectorRelacionalComboBox({
   maxLabelLength,
   disabled = false,
   onSearch,
+  preferCodeInTrigger = false,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -85,9 +88,17 @@ export function SelectorRelacionalComboBox({
     return options.filter((item) => {
       const displayValue = safeToString(item[displayKey]).toLowerCase()
       const valueValue = safeToString(item[valueKey]).toLowerCase()
-      return displayValue.includes(searchLower) || valueValue.includes(searchLower)
+      const parts = formatOptionParts ? formatOptionParts(item) : null
+      const descriptionValue = parts?.description?.toLowerCase() ?? ''
+      const codeValue = parts?.code?.toLowerCase() ?? ''
+      return (
+        displayValue.includes(searchLower) ||
+        valueValue.includes(searchLower) ||
+        descriptionValue.includes(searchLower) ||
+        codeValue.includes(searchLower)
+      )
     })
-  }, [options, localOptions, search, displayKey, valueKey, onSearch])
+  }, [options, localOptions, search, displayKey, valueKey, onSearch, formatOptionParts])
 
   const selectedItem = useMemo(() => {
     let found = options.find((i) => safeToString(i[valueKey]) === valueStr)
@@ -113,7 +124,9 @@ export function SelectorRelacionalComboBox({
   }
 
   const rawSelectedLabel = selectedItem
-    ? renderLabel(selectedItem)
+    ? preferCodeInTrigger && formatOptionParts
+      ? formatOptionParts(selectedItem).code
+      : renderLabel(selectedItem)
     : valueStr
       ? (fallbackLabel ?? placeholder)
       : placeholder
@@ -128,6 +141,14 @@ export function SelectorRelacionalComboBox({
     Boolean(tooltipText)
 
   const hasValue = Boolean(valueStr) && rawSelectedLabel !== placeholder
+  const triggerTitle =
+    selectedItem && hasValue
+      ? preferCodeInTrigger
+        ? renderLabel(selectedItem)
+        : rawSelectedLabel
+      : hasValue
+        ? rawSelectedLabel
+        : undefined
 
   useEffect(() => {
     if (!onSearchRef.current) return
@@ -162,7 +183,7 @@ export function SelectorRelacionalComboBox({
   const triggerContent = (
     <button
       type='button'
-      title={hasValue ? rawSelectedLabel : undefined}
+      title={triggerTitle}
       disabled={disabled}
       onClick={() => {
         if (!disabled) setOpen((v) => !v)
@@ -330,7 +351,7 @@ export function SelectorRelacionalComboBox({
                     key={itemValue || `${idx}`}
                     type='button'
                     className={cn(
-                      'group flex w-full items-center gap-2.5 rounded-lg px-3 py-2',
+                      'group flex w-full items-start gap-2.5 rounded-lg px-3 py-2',
                       'text-left text-sm outline-none',
                       'transition-colors duration-100',
                       isSelected
@@ -348,7 +369,7 @@ export function SelectorRelacionalComboBox({
                     {/* Check indicator */}
                     <span
                       className={cn(
-                        'flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+                        'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
                         'border transition-colors duration-100',
                         isSelected
                           ? 'border-foreground/30 bg-foreground/10'
@@ -359,18 +380,20 @@ export function SelectorRelacionalComboBox({
                     </span>
 
                     {optionParts ? (
-                      <span className='flex min-w-0 flex-1 flex-col gap-0.5 overflow-hidden py-0.5'>
-                        <span className='truncate font-mono text-[11px] leading-tight text-muted-foreground'>
+                      <span className='flex min-w-0 flex-1 flex-col gap-0.5 py-0.5'>
+                        <span className='font-mono text-[11px] leading-tight text-muted-foreground break-all'>
                           {optionParts.code}
                         </span>
                         {optionParts.description && (
-                          <span className='line-clamp-2 text-xs leading-snug text-foreground'>
+                          <span className='text-xs leading-snug text-foreground break-words whitespace-normal'>
                             {optionParts.description}
                           </span>
                         )}
                       </span>
                     ) : (
-                      <span className='flex-1 truncate'>{renderLabel(item)}</span>
+                      <span className='flex-1 break-words whitespace-normal text-left'>
+                        {renderLabel(item)}
+                      </span>
                     )}
                   </button>
                 )

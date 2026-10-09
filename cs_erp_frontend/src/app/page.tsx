@@ -8,6 +8,10 @@ import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import LoginPage from '@/components/auth/login-page'
 import { API_BASE_URL } from '@/lib/api-base-url'
+import {
+  buildArticuloSolicitudQuery,
+  filterArticulosSolicitudCompra,
+} from '@/components/tabs/solicitud-compra-shared'
 
 const fetch = (input: RequestInfo | URL, init?: RequestInit) =>
   globalThis.fetch(input, { ...init, credentials: 'include' });
@@ -24,32 +28,45 @@ export default function Home() {
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    async function checkServer() {
+    if (!mounted) return
+
+    let cancelled = false
+
+    async function bootstrapData() {
       try {
         const res = await fetch(`${API_BASE_URL}/globales-co`)
-        setServerOnline(res.ok)
-      } catch {
-        setServerOnline(false)
-      }
-    }
-    if (mounted) checkServer()
-  }, [mounted])
+        if (cancelled) return
 
-  useEffect(() => {
-    async function loadArticulos() {
-      if (!serverOnline) return
-      try {
-        const res = await fetch(`${API_BASE_URL}/articulo?limit=200`)
-        if (res.ok) setArticulos(await res.json())
+        // Sin sesión el API responde 401/403 pero el servidor está arriba
+        const online = res.ok || res.status === 401 || res.status === 403
+        setServerOnline(online)
+
+        if (!online || !isAuthenticated) return
+
+        const articulosRes = await fetch(
+          `${API_BASE_URL}/articulo?${buildArticuloSolicitudQuery({ limit: 200 })}`,
+        )
+        if (cancelled) return
+        if (articulosRes.ok) {
+          const list = await articulosRes.json()
+          setArticulos(filterArticulosSolicitudCompra(list))
+        }
       } catch (err) {
-        console.error('Error cargando artículos', err)
+        if (!cancelled) {
+          setServerOnline(false)
+          console.error('Error cargando datos iniciales', err)
+        }
       }
     }
-    loadArticulos()
-  }, [serverOnline])
+
+    void bootstrapData()
+    return () => {
+      cancelled = true
+    }
+  }, [mounted, isAuthenticated])
 
   const getSelectOptions = useCallback((selectedValue: string, sourceList: Articulo[]) => {
-    const list = [...sourceList]
+    const list = filterArticulosSolicitudCompra([...sourceList])
     if (selectedValue) {
       const exists = list.some(a => a.articulo === selectedValue)
       if (!exists) {
@@ -64,7 +81,7 @@ export default function Home() {
   const mergeToGlobalArticulos = useCallback((list: Articulo[]) => {
     setArticulos(prev => {
       const next = [...prev]
-      list.forEach(item => {
+      filterArticulosSolicitudCompra(list).forEach(item => {
         if (!next.some(x => x.articulo === item.articulo)) next.push(item)
       })
       return next

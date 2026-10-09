@@ -7,6 +7,7 @@ import { CreateCentroCuentaDto } from './dto/create-centro-cuenta.dto'
 import { UpdateCentroCuentaDto } from './dto/update-centro-cuenta.dto'
 import { Cuentacontable } from '../mantenimientos/cuenta-contable/entities/cuenta-contable.entity'
 import { Centrocosto } from '../mantenimientos/centrocosto/entities/centrocosto.entity'
+import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
 
 @Injectable()
 export class CentroCuentaService {
@@ -33,7 +34,7 @@ export class CentroCuentaService {
           cc.CUENTA_CONTABLE LIKE :q OR
           cc.ESTADO LIKE :q
         )`,
-        { q: `%${q}%` },
+        { q: `%${escapeMsSqlLike(q)}%` },
       )
     }
 
@@ -110,7 +111,9 @@ export class CentroCuentaService {
       .take(limit)
 
     if (q?.trim()) {
-      qb.andWhere('cc.cuentaContable LIKE :q', { q: `%${q.trim()}%` })
+      qb.andWhere('cc.cuentaContable LIKE :q', {
+        q: `%${escapeMsSqlLike(q.trim())}%`,
+      })
     }
 
     const rows = await qb.getRawMany<{ cuentacontable: string }>()
@@ -149,7 +152,9 @@ export class CentroCuentaService {
       .take(limit)
 
     if (q?.trim()) {
-      qb.andWhere('cc.centroCosto LIKE :q', { q: `%${q.trim()}%` })
+      qb.andWhere('cc.centroCosto LIKE :q', {
+        q: `%${escapeMsSqlLike(q.trim())}%`,
+      })
     }
 
     const rows = await qb.getRawMany<{ centrocosto: string }>()

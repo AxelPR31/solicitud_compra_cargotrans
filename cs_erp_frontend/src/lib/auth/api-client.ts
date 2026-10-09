@@ -22,16 +22,14 @@ api.interceptors.response.use(
 
     if (status === 401) {
       useAuthStore.getState().clearUser()
-      if (isBrowser) {
-        // Redirige al inicio (que mostrará el login)
-        window.location.replace('/')
-      }
     }
 
-    if (status === 403) {
-      if (isBrowser) {
-        toast.error('No tiene permisos para realizar esta acción')
-      }
+    const requestUrl = error.config?.url ?? ''
+    const isAuthBootstrap =
+      requestUrl === '/auth' || requestUrl.startsWith('/auth/')
+
+    if (status === 403 && isBrowser && !isAuthBootstrap) {
+      toast.error('No tiene permisos para realizar esta acción')
     }
 
     return Promise.reject(error)

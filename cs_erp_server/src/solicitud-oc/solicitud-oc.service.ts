@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { DataSource, Repository } from 'typeorm'
+import { DataSource, EntityManager, Repository } from 'typeorm'
 import { TENANT_CONENCTION } from '../tenant/tenant.module'
 import { SolicitudOc } from './entities/solicitud-oc.entity'
 import { SolicitudOcLinea } from '../solicitud-oc-linea/entities/solicitud-oc-linea.entity'
@@ -18,6 +18,7 @@ import { CentroCuentaService } from '../centro-cuenta/centro-cuenta.service'
 import { CuentacontableService } from '../mantenimientos/cuenta-contable/cuenta-contable.service'
 import { Articulo } from '../articulo/entities/articulo.entity'
 import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
+import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
 
 /** Si false, centro/cuenta en línea se guardan tal cual (null si no vienen); no se resuelve cuenta por artículo. */
 const CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA = false
@@ -79,7 +80,22 @@ export class SolicitudOcService {
     await this.cuentacontableService.assertAceptaMovimientos(cuentaContable)
   }
 
-  async create(createDto: CreateSolicitudOcDto) {
+  async create(_createDto: CreateSolicitudOcDto) {
+    throw new BadRequestException(
+      'Use POST /cs-solicitud-oc para crear solicitudes. Las aprobadas se insertan en Softland al aprobar.',
+    )
+  }
+
+  async insertarEnSoftland(
+    manager: EntityManager,
+    solicitudOcCodigo: string,
+    createDto: CreateSolicitudOcDto,
+    options: {
+      estadoCabecera: EstadoSolicitudOc
+      autorizadaPor?: string | null
+      fechaAutorizada?: Date | null
+    },
+  ): Promise<void> {
     const { lineas, ...headerData } = createDto
 
     if (!lineas?.length) {
@@ -91,121 +107,103 @@ export class SolicitudOcService {
       throw new BadRequestException('El departamento seleccionado no está activo.')
     }
 
-    const queryRunner = this.dataSource.createQueryRunner()
-    await queryRunner.connect()
-    await queryRunner.startTransaction()
+    const now = new Date()
+    const usuario = headerData.usuario || 'ERPADMIN'
+    const createdBy = this.buildCreatedBy(usuario)
+    const fechaSolicitud = this.parseDate(headerData.fechaSolicitud, now)
+    const fechaRequerida = this.parseDate(headerData.fechaRequerida, fechaSolicitud)
 
-    try {
-      const nuevoCodigo = await this.globalesCoService.obtenerSiguienteSolicitudConLock(
-        queryRunner.manager,
-      )
+    const header = manager.create(SolicitudOc, {
+      solicitudOc: solicitudOcCodigo,
+      departamento: headerData.departamento,
+      fechaSolicitud,
+      fechaRequerida,
+      autorizadaPor: options.autorizadaPor ?? null,
+      fechaAutorizada: options.fechaAutorizada ?? null,
+      prioridad: headerData.prioridad || 'M',
+      lineasNoAsig: lineas.length,
+      estado: options.estadoCabecera,
+      comentario: headerData.comentario || '',
+      fechaHora: now,
+      usuario,
+      usuarioCancela: null,
+      fechaHoraCancela: null,
+      rubro1: headerData.rubro1 || null,
+      rubro2: headerData.rubro2 || null,
+      rubro3: headerData.rubro3 || null,
+      rubro4: headerData.rubro4 || null,
+      rubro5: headerData.rubro5 || null,
+      placa: headerData.placa || null,
+      chasis: headerData.chasis || null,
+      marca: headerData.marca || null,
+      modelo: headerData.modelo || null,
+      createdBy,
+      updatedBy: createdBy,
+      createDate: now,
+      recordDate: now,
+    })
+    await manager.save(header)
 
-      const now = new Date()
-      const usuario = headerData.usuario || 'ERPADMIN'
-      const createdBy = this.buildCreatedBy(usuario)
-      const fechaSolicitud = this.parseDate(headerData.fechaSolicitud, now)
-      const fechaRequerida = this.parseDate(headerData.fechaRequerida, fechaSolicitud)
+    const articulosRepo = manager.getRepository(Articulo)
+    const articleCodes = lineas.map(l => l.articulo)
+    const dbArticulos = await articulosRepo
+      .createQueryBuilder('a')
+      .where('a.articulo IN (:...articleCodes)', { articleCodes })
+      .getMany()
+    const articulosMap = new Map(dbArticulos.map(a => [a.articulo, a]))
 
-      const header = queryRunner.manager.create(SolicitudOc, {
-        solicitudOc: nuevoCodigo,
-        departamento: headerData.departamento,
-        fechaSolicitud,
-        fechaRequerida,
-        autorizadaPor: null,
-        fechaAutorizada: null,
-        prioridad: headerData.prioridad || 'M',
-        lineasNoAsig: lineas.length,
-        estado: 'A' as EstadoSolicitudOc,
-        comentario: headerData.comentario || '',
-        fechaHora: now,
-        usuario,
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i]
+      const art = articulosMap.get(linea.articulo)
+      if (!art || art.activo !== 'S') {
+        throw new BadRequestException(
+          `El artículo ${linea.articulo} no existe o no está activo.`,
+        )
+      }
+
+      const centroCosto = linea.centroCosto || null
+      let cuentaContable = linea.cuentaContable || null
+      if (!cuentaContable && CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA) {
+        const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
+        cuentaContable = resuelto.cuentaContable
+      }
+
+      const cantidad = Number(linea.cantidad)
+      if (cantidad <= 0) {
+        throw new BadRequestException(
+          `La cantidad del artículo ${linea.articulo} debe ser mayor a cero.`,
+        )
+      }
+
+      await this.validarCentroCuentaLinea(centroCosto, cuentaContable)
+      await this.validarCuentaContableLinea(cuentaContable)
+
+      const lineaEntity = manager.create(SolicitudOcLinea, {
+        solicitudOc: solicitudOcCodigo,
+        solicitudOcLinea: i + 1,
         usuarioCancela: null,
+        articulo: linea.articulo,
+        descripcion: linea.descripcion || art.descripcion,
+        cantidad,
+        saldo: cantidad,
+        estado: 'A',
+        comentario: linea.comentario || null,
+        especificacion: linea.especificacion || null,
+        fechaRequerida: this.parseDate(linea.fechaRequerida, fechaRequerida),
+        unidadDistribucio: null,
         fechaHoraCancela: null,
-        rubro1: headerData.rubro1 || null,
-        rubro2: headerData.rubro2 || null,
-        rubro3: headerData.rubro3 || null,
-        rubro4: headerData.rubro4 || null,
-        rubro5: headerData.rubro5 || null,
-        placa: headerData.placa || null,
-        chasis: headerData.chasis || null,
-        marca: headerData.marca || null,
-        modelo: headerData.modelo || null,
+        centroCosto,
+        cuentaContable,
+        eMail: null,
+        fase: linea.fase || null,
+        proyecto: linea.proyecto || null,
+        ordenCambio: null,
         createdBy,
         updatedBy: createdBy,
         createDate: now,
         recordDate: now,
       })
-      await queryRunner.manager.save(header)
-
-      const articulosRepo = queryRunner.manager.getRepository(Articulo)
-      const articleCodes = lineas.map(l => l.articulo)
-      const dbArticulos = await articulosRepo
-        .createQueryBuilder('a')
-        .where('a.articulo IN (:...articleCodes)', { articleCodes })
-        .getMany()
-      const articulosMap = new Map(dbArticulos.map(a => [a.articulo, a]))
-
-      for (let i = 0; i < lineas.length; i++) {
-        const linea = lineas[i]
-        const art = articulosMap.get(linea.articulo)
-        if (!art || art.activo !== 'S') {
-          throw new BadRequestException(
-            `El artículo ${linea.articulo} no existe o no está activo.`,
-          )
-        }
-
-        const centroCosto = linea.centroCosto || null
-        let cuentaContable = linea.cuentaContable || null
-        if (!cuentaContable && CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA) {
-          const resuelto = await this.articuloCuentaService.resolverPorArticulo(linea.articulo)
-          cuentaContable = resuelto.cuentaContable
-        }
-
-        const cantidad = Number(linea.cantidad)
-        if (cantidad <= 0) {
-          throw new BadRequestException(
-            `La cantidad del artículo ${linea.articulo} debe ser mayor a cero.`,
-          )
-        }
-
-        await this.validarCentroCuentaLinea(centroCosto, cuentaContable)
-        await this.validarCuentaContableLinea(cuentaContable)
-
-        const lineaEntity = queryRunner.manager.create(SolicitudOcLinea, {
-          solicitudOc: nuevoCodigo,
-          solicitudOcLinea: i + 1,
-          usuarioCancela: null,
-          articulo: linea.articulo,
-          descripcion: linea.descripcion || art.descripcion,
-          cantidad,
-          saldo: cantidad,
-          estado: 'A',
-          comentario: linea.comentario || null,
-          especificacion: linea.especificacion || null,
-          fechaRequerida: this.parseDate(linea.fechaRequerida, fechaRequerida),
-          unidadDistribucio: null,
-          fechaHoraCancela: null,
-          centroCosto,
-          cuentaContable,
-          eMail: null,
-          fase: linea.fase || null,
-          proyecto: linea.proyecto || null,
-          ordenCambio: null,
-          createdBy,
-          updatedBy: createdBy,
-          createDate: now,
-          recordDate: now,
-        })
-        await queryRunner.manager.save(lineaEntity)
-      }
-
-      await queryRunner.commitTransaction()
-      return this.findOne(nuevoCodigo)
-    } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
-    } finally {
-      await queryRunner.release()
+      await manager.save(lineaEntity)
     }
   }
 
@@ -223,6 +221,7 @@ export class SolicitudOcService {
       fechaRequeridaHasta,
       prioridades,
       estados,
+      q,
     } = query
 
     const qb = this.repository
@@ -234,17 +233,30 @@ export class SolicitudOcService {
       .take(limit)
       .skip(offset)
 
+    const search = q?.trim()
+    if (search) {
+      const term = `%${escapeMsSqlLike(search)}%`
+      qb.andWhere(
+        '(RTRIM(s.solicitudOc) LIKE :term OR s.comentario LIKE :term OR RTRIM(s.departamento) LIKE :term)',
+        { term },
+      )
+    }
+
     if (solicitudDesde) {
-      qb.andWhere('s.solicitudOc >= :solicitudDesde', { solicitudDesde })
+      qb.andWhere('RTRIM(s.solicitudOc) >= :solicitudDesde', { solicitudDesde })
     }
     if (solicitudHasta) {
-      qb.andWhere('s.solicitudOc <= :solicitudHasta', { solicitudHasta })
+      qb.andWhere('RTRIM(s.solicitudOc) <= :solicitudHasta', { solicitudHasta })
     }
     if (departamentoDesde) {
-      qb.andWhere('s.departamento >= :departamentoDesde', { departamentoDesde })
+      qb.andWhere('RTRIM(s.departamento) >= :departamentoDesde', {
+        departamentoDesde,
+      })
     }
     if (departamentoHasta) {
-      qb.andWhere('s.departamento <= :departamentoHasta', { departamentoHasta })
+      qb.andWhere('RTRIM(s.departamento) <= :departamentoHasta', {
+        departamentoHasta,
+      })
     }
     if (fechaSolicitudDesde) {
       qb.andWhere('CAST(s.fechaSolicitud AS DATE) >= :fechaSolicitudDesde', {

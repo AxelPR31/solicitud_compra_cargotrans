@@ -23,7 +23,13 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { SolicitudOc, SolicitudOcLinea, SolicitudOcEstado, SolicitudOcPrioridad } from "@/lib/types";
+import type {
+  Departamento,
+  SolicitudOc,
+  SolicitudOcLinea,
+  SolicitudOcEstado,
+  SolicitudOcPrioridad,
+} from "@/lib/types";
 import { SOLICITUD_OC_ESTADOS, SOLICITUD_OC_PRIORIDADES } from "@/lib/types";
 import {
   CS_ENCABEZADO_VEHICULO_HABILITADO,
@@ -37,8 +43,12 @@ import {
   countActiveFilters,
   defaultHistorialFilters,
   HISTORIAL_PAGE_SIZE,
+  normalizeHistorialFilters,
+  validateHistorialFiltersForApply,
   type HistorialFilters,
 } from "./solicitud-compra-historial-filters";
+import { SolicitudCompraHistorialCsPanel } from "./solicitud-compra-historial-cs-panel";
+import { SelectorRelacionalComboBox } from "@/components/ui/selector-relacional-combobox";
 
 interface SolicitudCompraHistorialTabProps extends SolicitudCompraTabBaseProps {
   onEdit: (solicitudOc: string) => void;
@@ -113,8 +123,8 @@ export function SolicitudCompraHistorialTab({
   const [totalRecords, setTotalRecords] = useState(0);
   const [page, setPage] = useState(1);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [draftFilters, setDraftFilters] = useState<HistorialFilters>(defaultHistorialFilters);
-  const [appliedFilters, setAppliedFilters] = useState<HistorialFilters>(defaultHistorialFilters);
+  const [draftFilters, setDraftFilters] = useState<HistorialFilters>(() => defaultHistorialFilters());
+  const [appliedFilters, setAppliedFilters] = useState<HistorialFilters>(() => defaultHistorialFilters());
   const [detailId, setDetailId] = useState<string | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailCache, setDetailCache] = useState<Record<string, SolicitudOc>>({});
@@ -122,6 +132,57 @@ export function SolicitudCompraHistorialTab({
   const [sortAsc, setSortAsc] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [exportingReport, setExportingReport] = useState<"pdf" | "excel" | "print" | null>(null);
+  const [bandeja, setBandeja] = useState<"planeadas" | "softland">("planeadas");
+  const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
+  const [solicitudCatalog, setSolicitudCatalog] = useState<SolicitudOc[]>([]);
+
+  useEffect(() => {
+    if (!serverOnline) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/departamento?activo=S&limit=500`);
+        if (res.ok) {
+          const data = await res.json();
+          setDepartamentos(Array.isArray(data) ? data : []);
+        }
+      } catch {
+        /* catálogo para filtro de departamento */
+      }
+    })();
+  }, [serverOnline, API_BASE_URL]);
+
+  useEffect(() => {
+    if (!serverOnline) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/solicitud-oc?limit=100&offset=0`);
+        if (res.ok) {
+          const data = await res.json();
+          setSolicitudCatalog(Array.isArray(data) ? data : (data.items ?? []));
+        }
+      } catch {
+        /* catálogo para filtro de solicitud */
+      }
+    })();
+  }, [serverOnline, API_BASE_URL]);
+
+  const solicitudFilterDescription = (item: SolicitudOc) => {
+    const parts = [item.departamento, item.comentario?.trim()].filter(Boolean);
+    return parts.join(" · ") || "—";
+  };
+
+  const fetchSolicitudFilterOptions = useCallback(
+    async (search: string) => {
+      const params = new URLSearchParams({ limit: "50", offset: "0" });
+      if (search.trim()) params.set("q", search.trim());
+      const res = await fetch(`${API_BASE_URL}/solicitud-oc?${params.toString()}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : (data.items ?? []);
+      return items as SolicitudOc[];
+    },
+    [API_BASE_URL],
+  );
 
   const fetchHistory = useCallback(async (filters = appliedFilters, pageNum = page) => {
     if (!serverOnline) return;
@@ -147,7 +208,14 @@ export function SolicitudCompraHistorialTab({
   }, [serverOnline, API_BASE_URL, appliedFilters, page]);
 
   const applyFilters = () => {
-    setAppliedFilters(draftFilters);
+    const validationError = validateHistorialFiltersForApply(draftFilters);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+    const normalized = normalizeHistorialFilters(draftFilters);
+    setDraftFilters(normalized);
+    setAppliedFilters(normalized);
     setDetailId(null);
     setPage(1);
     setFiltersOpen(false);
@@ -170,7 +238,9 @@ export function SolicitudCompraHistorialTab({
     setDraftFilters(prev => ({
       ...prev,
       prioridades: prev.prioridades.includes(value)
-        ? prev.prioridades.filter(p => p !== value)
+        ? prev.prioridades.length > 1
+          ? prev.prioridades.filter(p => p !== value)
+          : prev.prioridades
         : [...prev.prioridades, value],
     }));
   };
@@ -179,14 +249,17 @@ export function SolicitudCompraHistorialTab({
     setDraftFilters(prev => ({
       ...prev,
       estados: prev.estados.includes(value)
-        ? prev.estados.filter(e => e !== value)
+        ? prev.estados.length > 1
+          ? prev.estados.filter(e => e !== value)
+          : prev.estados
         : [...prev.estados, value],
     }));
   };
 
   useEffect(() => {
+    if (bandeja !== "softland") return;
     fetchHistory(appliedFilters, page);
-  }, [fetchHistory, refreshKey, page]);
+  }, [fetchHistory, refreshKey, page, bandeja, appliedFilters]);
 
   const fetchDetail = useCallback(async (id: string) => {
     const res = await fetch(`${API_BASE_URL}/solicitud-oc/${encodeURIComponent(id)}`);
@@ -357,23 +430,70 @@ export function SolicitudCompraHistorialTab({
       : <ChevronDown className="inline h-3 w-3" />;
   };
 
+  const departamentoComboProps = {
+    options: departamentos,
+    displayKey: "descripcion" as const,
+    valueKey: "departamento" as const,
+    formatOptionParts: (item: Departamento) => ({
+      code: item.departamento,
+      description: item.descripcion,
+    }),
+    placeholder: "Buscar código o descripción...",
+  };
+
+  const solicitudComboProps = {
+    options: solicitudCatalog,
+    displayKey: "solicitudOc" as const,
+    valueKey: "solicitudOc" as const,
+    formatOptionParts: (item: SolicitudOc) => ({
+      code: item.solicitudOc,
+      description: solicitudFilterDescription(item),
+    }),
+    placeholder: "Buscar número o descripción...",
+    onSearch: fetchSolicitudFilterOptions,
+  };
+
   const RangeField = ({
     label,
     desdeKey,
     hastaKey,
     isDate = false,
+    isDepartamento = false,
+    isSolicitud = false,
   }: {
     label: string;
     desdeKey: keyof HistorialFilters;
     hastaKey: keyof HistorialFilters;
     isDate?: boolean;
+    isDepartamento?: boolean;
+    isSolicitud?: boolean;
   }) => (
-    <div className="space-y-2">
+    <div className="space-y-2.5">
       <Label className="text-xs font-medium text-slate-700" optional>{label}</Label>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
+        <div className="min-w-0 space-y-1">
           <span className="text-[11px] text-slate-400">Desde</span>
-          {isDate ? (
+          {isSolicitud ? (
+            <SelectorRelacionalComboBox
+              label=""
+              value={draftFilters.solicitudDesde}
+              {...solicitudComboProps}
+              preferCodeInTrigger
+              onChange={val =>
+                setDraftFilters(prev => ({ ...prev, solicitudDesde: String(val) }))
+              }
+            />
+          ) : isDepartamento ? (
+            <SelectorRelacionalComboBox
+              label=""
+              value={draftFilters.departamentoDesde}
+              {...departamentoComboProps}
+              preferCodeInTrigger
+              onChange={val =>
+                setDraftFilters(prev => ({ ...prev, departamentoDesde: String(val) }))
+              }
+            />
+          ) : isDate ? (
             <DateInput
               value={String(draftFilters[desdeKey])}
               onChange={v => setDraftFilters(prev => ({ ...prev, [desdeKey]: v }))}
@@ -386,9 +506,29 @@ export function SolicitudCompraHistorialTab({
             />
           )}
         </div>
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <span className="text-[11px] text-slate-400">Hasta</span>
-          {isDate ? (
+          {isSolicitud ? (
+            <SelectorRelacionalComboBox
+              label=""
+              value={draftFilters.solicitudHasta}
+              {...solicitudComboProps}
+              preferCodeInTrigger
+              onChange={val =>
+                setDraftFilters(prev => ({ ...prev, solicitudHasta: String(val) }))
+              }
+            />
+          ) : isDepartamento ? (
+            <SelectorRelacionalComboBox
+              label=""
+              value={draftFilters.departamentoHasta}
+              {...departamentoComboProps}
+              preferCodeInTrigger
+              onChange={val =>
+                setDraftFilters(prev => ({ ...prev, departamentoHasta: String(val) }))
+              }
+            />
+          ) : isDate ? (
             <DateInput
               value={String(draftFilters[hastaKey])}
               onChange={v => setDraftFilters(prev => ({ ...prev, [hastaKey]: v }))}
@@ -407,6 +547,40 @@ export function SolicitudCompraHistorialTab({
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={bandeja === "planeadas" ? "default" : "outline"}
+          onClick={() => {
+            setBandeja("planeadas");
+            setDetailId(null);
+          }}
+        >
+          Planeadas
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={bandeja === "softland" ? "default" : "outline"}
+          onClick={() => {
+            setBandeja("softland");
+            setDetailId(null);
+          }}
+        >
+          En Softland
+        </Button>
+      </div>
+
+      {bandeja === "planeadas" ? (
+        <SolicitudCompraHistorialCsPanel
+          serverOnline={serverOnline}
+          API_BASE_URL={API_BASE_URL}
+          refreshKey={refreshKey}
+          onEdit={id => onEdit(`cs:${id}`)}
+        />
+      ) : (
+      <>
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border bg-white px-4 py-4 sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -444,14 +618,42 @@ export function SolicitudCompraHistorialTab({
         {filtersOpen && (
           <div className="border-b border-border bg-slate-50/60 px-4 py-5 sm:px-6">
             <p className="mb-4 text-sm font-medium text-slate-800">Selección de registros</p>
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-              <RangeField label="Solicitud" desdeKey="solicitudDesde" hastaKey="solicitudHasta" />
-              <RangeField label="Departamento" desdeKey="departamentoDesde" hastaKey="departamentoHasta" />
-              <RangeField label="Fecha solicitud" desdeKey="fechaSolicitudDesde" hastaKey="fechaSolicitudHasta" isDate />
-              <RangeField label="Fecha requerida" desdeKey="fechaRequeridaDesde" hastaKey="fechaRequeridaHasta" isDate />
+
+            <div className="rounded-xl border border-border bg-white p-4 shadow-sm sm:p-5">
+              <p className="mb-4 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                Rangos
+              </p>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <RangeField
+                  label="Solicitud"
+                  desdeKey="solicitudDesde"
+                  hastaKey="solicitudHasta"
+                  isSolicitud
+                />
+                <RangeField
+                  label="Departamento"
+                  desdeKey="departamentoDesde"
+                  hastaKey="departamentoHasta"
+                  isDepartamento
+                />
+              </div>
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                <RangeField
+                  label="Fecha solicitud"
+                  desdeKey="fechaSolicitudDesde"
+                  hastaKey="fechaSolicitudHasta"
+                  isDate
+                />
+                <RangeField
+                  label="Fecha requerida"
+                  desdeKey="fechaRequeridaDesde"
+                  hastaKey="fechaRequeridaHasta"
+                  isDate
+                />
+              </div>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-lg border border-border bg-white p-4">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Prioridad</p>
                 <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -486,11 +688,18 @@ export function SolicitudCompraHistorialTab({
               </div>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Button type="button" size="sm" onClick={applyFilters} disabled={loadingHistory}>
+            <div className="mt-5 flex flex-col gap-2 border-t border-border/80 pt-4 sm:flex-row sm:flex-wrap">
+              <Button type="button" size="sm" className="w-full sm:w-auto" onClick={applyFilters} disabled={loadingHistory}>
                 Aplicar filtros
               </Button>
-              <Button type="button" size="sm" variant="outline" onClick={resetFilters} disabled={loadingHistory}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={resetFilters}
+                disabled={loadingHistory}
+              >
                 Limpiar todo
               </Button>
             </div>
@@ -847,6 +1056,8 @@ export function SolicitudCompraHistorialTab({
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </motion.div>
   );

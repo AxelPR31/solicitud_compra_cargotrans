@@ -5,6 +5,31 @@ import type { AuthUser, SignInDto } from './types'
 
 const AUTH_ENDPOINT = '/auth'
 
+export class AuthApiError extends Error {
+  readonly status?: number
+  readonly code?: string
+
+  constructor(message: string, status?: number, code?: string) {
+    super(message)
+    this.name = 'AuthApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
+const toAuthApiError = (error: unknown, fallback: string): AuthApiError => {
+  if (axios.isAxiosError(error)) {
+    const status = error.response?.status
+    const body = error.response?.data as { code?: string } | undefined
+    return new AuthApiError(
+      extractApiErrorMessage(error, fallback),
+      status,
+      body?.code,
+    )
+  }
+  return new AuthApiError(fallback)
+}
+
 export const signInApi = async (payload: SignInDto): Promise<AuthUser> => {
   try {
     const response = await api.post<AuthUser>(`${AUTH_ENDPOINT}/signin`, payload)
@@ -31,7 +56,7 @@ export const meApi = async (): Promise<AuthUser> => {
     const response = await api.get<AuthUser>(AUTH_ENDPOINT)
     return response.data
   } catch (error: unknown) {
-    throw new Error(extractApiErrorMessage(error, 'No se pudo obtener la sesión'))
+    throw toAuthApiError(error, 'No se pudo obtener la sesión')
   }
 }
 

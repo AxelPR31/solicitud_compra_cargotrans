@@ -29,6 +29,55 @@ export const defaultHistorialFilters = (): HistorialFilters => ({
   estados: [...ALL_ESTADOS],
 });
 
+function swapRangePair(desde: string, hasta: string): [string, string] {
+  const a = desde.trim();
+  const b = hasta.trim();
+  if (a && b && a > b) return [b, a];
+  return [a, b];
+}
+
+/** Alinea rangos Desde/Hasta (como Softland) y recorta espacios en textos. */
+export function normalizeHistorialFilters(filters: HistorialFilters): HistorialFilters {
+  const [solicitudDesde, solicitudHasta] = swapRangePair(
+    filters.solicitudDesde,
+    filters.solicitudHasta,
+  );
+  const [departamentoDesde, departamentoHasta] = swapRangePair(
+    filters.departamentoDesde,
+    filters.departamentoHasta,
+  );
+  const [fechaSolicitudDesde, fechaSolicitudHasta] = swapRangePair(
+    filters.fechaSolicitudDesde,
+    filters.fechaSolicitudHasta,
+  );
+  const [fechaRequeridaDesde, fechaRequeridaHasta] = swapRangePair(
+    filters.fechaRequeridaDesde,
+    filters.fechaRequeridaHasta,
+  );
+
+  return {
+    ...filters,
+    solicitudDesde,
+    solicitudHasta,
+    departamentoDesde,
+    departamentoHasta,
+    fechaSolicitudDesde,
+    fechaSolicitudHasta,
+    fechaRequeridaDesde,
+    fechaRequeridaHasta,
+  };
+}
+
+export function validateHistorialFiltersForApply(filters: HistorialFilters): string | null {
+  if (filters.prioridades.length === 0) {
+    return "Seleccione al menos una prioridad.";
+  }
+  if (filters.estados.length === 0) {
+    return "Seleccione al menos un estado.";
+  }
+  return null;
+}
+
 export function countActiveFilters(filters: HistorialFilters): number {
   const defaults = defaultHistorialFilters();
   let count = 0;

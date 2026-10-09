@@ -68,6 +68,55 @@ export interface SolicitudOcLinea {
   cuentaContable?: string
 }
 
+export type CsWorkflowEstado = 'PLANEADA' | 'APROBADA' | 'RECHAZADA'
+
+export const CS_WORKFLOW_ESTADOS: { value: CsWorkflowEstado; label: string }[] = [
+  { value: 'PLANEADA', label: 'Planeada' },
+  { value: 'APROBADA', label: 'Aprobada' },
+  { value: 'RECHAZADA', label: 'Rechazada' },
+]
+
+export interface CsSolicitudOcLinea {
+  csSolicitudId: number
+  linea: number
+  articulo: string
+  descripcion?: string
+  cantidad: number
+  comentario?: string
+  especificacion?: string
+  fechaRequerida?: string
+  centroCosto?: string
+  cuentaContable?: string
+  fase?: string
+  proyecto?: string
+}
+
+export interface CsSolicitudOc {
+  id: number
+  workflowEstado: CsWorkflowEstado
+  solicitudOcSoftland?: string | null
+  departamento: string
+  fechaSolicitud: string
+  fechaRequerida: string
+  prioridad: SolicitudOcPrioridad
+  comentario?: string
+  usuarioSolicita?: string
+  fechaHoraSolicitud?: string
+  usuarioAprobo?: string
+  fechaAprobacion?: string
+  motivoRechazo?: string
+  rubro1?: string
+  rubro2?: string
+  rubro3?: string
+  rubro4?: string
+  rubro5?: string
+  placa?: string
+  chasis?: string
+  marca?: string
+  modelo?: string
+  lineas?: CsSolicitudOcLinea[]
+}
+
 export interface SolicitudOc {
   solicitudOc: string
   departamento: string

@@ -4,6 +4,8 @@ import {
   ForbiddenException,
   Injectable,
 } from '@nestjs/common'
+import { Reflector } from '@nestjs/core'
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 import { Request } from 'express'
 import { JwtService } from '@nestjs/jwt'
 import constants from '../constants'
@@ -11,7 +13,10 @@ import { JwtPayload } from 'jsonwebtoken'
 
 @Injectable()
 export class ConsultaOnlyReportesGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
+  ) {}
 
   private debug(req: Request, extra?: Record<string, any>) {
     // Activar solo si se define esta env var para no ensuciar logs en prod.
@@ -63,14 +68,19 @@ export class ConsultaOnlyReportesGuard implements CanActivate {
   }
 
   canActivate(context: ExecutionContext): boolean {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ])
+    if (isPublic) return true
+
     const request = context.switchToHttp().getRequest<Request>()
 
-    // Leer JWT directo de la cookie (independiente de AuthGuard)
+    // Leer JWT directo de la cookie (permisos consulta; AuthGuard valida sesión)
     const tokenHeader = (request as any).cookies?.[constants.AUTH_KEY] as
       | string
       | undefined
 
-    // Si no hay token, dejamos que el AuthGuard (por controlador) responda.
     if (!tokenHeader) return true
 
     const split = tokenHeader.split(' ')
@@ -84,7 +94,6 @@ export class ConsultaOnlyReportesGuard implements CanActivate {
     try {
       payload = this.jwtService.verify(token, { secret: constants.JWT_SECRET })
     } catch {
-      // Token inválido/expirado: lo maneja AuthGuard (por controlador)
       return true
     }
 

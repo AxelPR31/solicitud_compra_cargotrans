@@ -5,6 +5,21 @@ import { DataSource, Repository } from 'typeorm'
 import { Cuentacontable } from './entities/cuenta-contable.entity'
 import { TENANT_CONENCTION } from '../../tenant/tenant.module'
 import { PageOptionsDto } from '../../core/paging/dtos/page-options.dto'
+import { resolveSortColumn } from '../../core/sql/resolve-sort-column'
+import { escapeMsSqlLike } from '../../core/sql/escape-ms-sql-like'
+
+const CUENTA_CONTABLE_SORT_COLUMNS = [
+  'cuentacontable',
+  'descripcion',
+  'tipo',
+  'tipodetalle',
+  'saldonormal',
+  'conversion',
+  'tipocambio',
+  'aceptadatos',
+  'usacentro',
+  'notas',
+] as const
 import { PageDto } from '../../core/paging/dtos/page.dto'
 import { PageMetaDto } from '../../core/paging/dtos/page-meta.dto'
 import { PaginationDto } from '../../common/dto/pagination.dto'
@@ -61,7 +76,7 @@ export class CuentacontableService {
       .where(
         'CUENTA_CONTABLE like :searchValue or TIPO like :searchValue or descripcion like :searchValue or TIPO_DETALLADO like :searchValue or SALDO_NORMAL like :searchValue or CONVERSION like :searchValue or TIPO_CAMBIO like :searchValue or NOTAS like :searchValue',
         {
-          searchValue: `%${searchValue}%`,
+          searchValue: `%${escapeMsSqlLike(searchValue)}%`,
         },
       )
       .getMany()
@@ -70,10 +85,12 @@ export class CuentacontableService {
     pageOptionsDto: PageOptionsDto,
   ): Promise<PageDto<Cuentacontable>> {
     const qb = this.repository.createQueryBuilder('cuentacontable')
-    qb.orderBy(
-      `cuentacontable.${pageOptionsDto.property ?? 'cuentacontable'}`,
-      pageOptionsDto.order,
+    const sortCol = resolveSortColumn(
+      CUENTA_CONTABLE_SORT_COLUMNS,
+      pageOptionsDto.property,
+      'cuentacontable',
     )
+    qb.orderBy(`cuentacontable.${sortCol}`, pageOptionsDto.order)
       .skip(pageOptionsDto.skip)
       .take(pageOptionsDto.take)
 
