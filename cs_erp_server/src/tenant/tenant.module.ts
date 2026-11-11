@@ -27,6 +27,7 @@ import { ArticuloCompra } from '../orden-compra/entities/articulo-compra.entity'
 import { ExistenciaBodega } from '../orden-compra/entities/existencia-bodega.entity'
 import { UsuarioAprobOc } from '../orden-compra/entities/usuario-aprob-oc.entity'
 import { Proveedor } from '../orden-compra/entities/proveedor.entity'
+import { CsPermisoUsuario } from '../permiso-usuario/entities/cs-permiso-usuario.entity'
 
 export const DATABASE_NAME =
   process.env.DATABASE_NAME?.trim() ||
@@ -92,6 +93,7 @@ export class TenantModule {
                 ExistenciaBodega,
                 UsuarioAprobOc,
                 Proveedor,
+                CsPermisoUsuario,
               ],
               synchronize: false,
               options: {

@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AuthApiError, meApi, logoutApi, refreshSessionApi, signInApi } from './api'
 import { useAuthStore } from './store'
 import type { SignInDto } from './types'
+import { AUTH_QUERY_KEY } from './query-keys'
 
-const AUTH_QUERY_KEY = ['auth', 'me'] as const
+export { AUTH_QUERY_KEY }
 
 export const useAuth = () => {
   const queryClient = useQueryClient()
@@ -69,7 +70,14 @@ export const useAuth = () => {
 
     const err = meQuery.error
     if (err instanceof AuthApiError) {
-      if (err.code === 'TOKEN_EXPIRED' || err.status === 403) return
+      if (
+        err.code === 'TOKEN_EXPIRED' ||
+        err.code === 'NO_SESSION' ||
+        err.status === 401 ||
+        err.status === 403
+      ) {
+        return
+      }
     }
 
     hasTriedRefresh.current = true
@@ -78,9 +86,10 @@ export const useAuth = () => {
 
   const isAuthenticated = Boolean(user)
   const isLoading = meQuery.isLoading || loginMutation.isPending || logoutMutation.isPending
+  const sessionUser = meQuery.data ?? user
 
   return {
-    user,
+    user: sessionUser,
     isAuthenticated,
     isLoading,
     login,

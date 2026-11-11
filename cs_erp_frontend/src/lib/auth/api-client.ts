@@ -27,8 +27,11 @@ api.interceptors.response.use(
     const requestUrl = error.config?.url ?? ''
     const isAuthBootstrap =
       requestUrl === '/auth' || requestUrl.startsWith('/auth/')
+    const isPermisosAdmin =
+      requestUrl === '/permiso-usuario' ||
+      requestUrl.startsWith('/permiso-usuario')
 
-    if (status === 403 && isBrowser && !isAuthBootstrap) {
+    if (status === 403 && isBrowser && !isAuthBootstrap && !isPermisosAdmin) {
       toast.error('No tiene permisos para realizar esta acción')
     }
 

@@ -22,6 +22,7 @@ import {
   type LineaForm,
   type SolicitudCompraTabBaseProps,
 } from "./solicitud-compra-shared";
+import { useCanRegistrarSolicitudCompraQuery } from "@/lib/permisos/use-permisos";
 
 interface SolicitudCompraNuevaTabProps extends SolicitudCompraTabBaseProps {
   editSolicitudId: string | null;
@@ -58,6 +59,8 @@ export function SolicitudCompraNuevaTab({
   onSaved,
   onClearEdit,
 }: SolicitudCompraNuevaTabProps) {
+  const { canRegistrarSolicitudCompra, isLoading: permisosLoading } =
+    useCanRegistrarSolicitudCompraQuery();
   const [isSaving, setIsSaving] = useState(false);
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [globalesCo, setGlobalesCo] = useState<GlobalesCo | null>(null);
@@ -491,6 +494,12 @@ export function SolicitudCompraNuevaTab({
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!permisosLoading && !canRegistrarSolicitudCompra && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            No tiene permiso para registrar solicitudes de compra. Un administrador debe marcarle{" "}
+            <span className="font-medium">Registrar solicitudes</span> en Permisos.
+          </p>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -788,7 +797,11 @@ export function SolicitudCompraNuevaTab({
         </Card>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button type="submit" className="w-full sm:w-auto" disabled={isSaving || !serverOnline}>
+          <Button
+            type="submit"
+            className="w-full sm:w-auto"
+            disabled={isSaving || !serverOnline || !canRegistrarSolicitudCompra || permisosLoading}
+          >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Calendar className="h-4 w-4 mr-2" />}
             {editingCsId ? "Actualizar Solicitud" : "Crear Solicitud"}
           </Button>

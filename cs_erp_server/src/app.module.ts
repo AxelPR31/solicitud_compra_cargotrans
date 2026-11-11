@@ -27,6 +27,7 @@ import { CsSolicitudOcLinea } from './cs-solicitud-oc/entities/cs-solicitud-oc-l
 import { CsSolicitudOcModule } from './cs-solicitud-oc/cs-solicitud-oc.module'
 import { CsDatabaseModule } from './cs-database/cs-database.module'
 import { OrdenCompraModule } from './orden-compra/orden-compra.module'
+import { PermisoUsuarioModule } from './permiso-usuario/permiso-usuario.module'
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { OrdenCompraModule } from './orden-compra/orden-compra.module'
     CsDatabaseModule,
     OrdenCompraModule,
     UsuarioSoftlandModule,
+    PermisoUsuarioModule,
   ],
   controllers: [AppController],
   providers: [

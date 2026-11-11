@@ -38,6 +38,10 @@ import {
   type CsQuickWorkflowFilter,
 } from "./solicitud-compra-historial-cs-filters";
 import { HISTORIAL_PAGE_SIZE } from "./solicitud-compra-historial-filters";
+import {
+  useCanAprobarSolicitudCompraQuery,
+  useCanRegistrarSolicitudCompraQuery,
+} from "@/lib/permisos/use-permisos";
 
 const formatDate = (value?: string | null) => {
   if (!value) return "";
@@ -96,6 +100,8 @@ export function SolicitudCompraHistorialCsPanel({
   const [workflowBusy, setWorkflowBusy] = useState<WorkflowBusy | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingWorkflowAction | null>(null);
   const [rechazoMotivo, setRechazoMotivo] = useState("");
+  const { canAprobarSolicitudCompra } = useCanAprobarSolicitudCompraQuery();
+  const { canRegistrarSolicitudCompra } = useCanRegistrarSolicitudCompraQuery();
 
   useEffect(() => {
     if (!serverOnline) return;
@@ -487,7 +493,7 @@ export function SolicitudCompraHistorialCsPanel({
           <Eye className="h-4 w-4 shrink-0" />
           {fullWidth ? "Ver detalle" : "Ver"}
         </Button>
-        {isPlaneada && (
+        {isPlaneada && canAprobarSolicitudCompra && (
           <div
             className={cn(
               fullWidth ? "grid grid-cols-2 gap-2" : "contents",
@@ -961,35 +967,41 @@ export function SolicitudCompraHistorialCsPanel({
             </div>
             {detail && (
               <div className="shrink-0 border-t bg-white p-4 sm:px-6">
-                {canEdit ? (
+                {canEdit && (canRegistrarSolicitudCompra || canAprobarSolicitudCompra) ? (
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => onEdit(detail.id)}
-                    >
-                      Editar
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full gap-1 text-red-700 sm:w-auto"
-                      disabled={isWorkflowBusy(detail.id)}
-                      onClick={() => openRechazarConfirm(detail.id)}
-                    >
-                      <Ban className="h-4 w-4 shrink-0" />
-                      Rechazar
-                    </Button>
-                    <Button
-                      type="button"
-                      className="w-full gap-1 sm:w-auto"
-                      disabled={isWorkflowBusy(detail.id)}
-                      onClick={() => openAprobarConfirm(detail.id)}
-                    >
-                      <Check className="h-4 w-4 shrink-0" />
-                      Aprobar
-                    </Button>
+                    {canRegistrarSolicitudCompra && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        onClick={() => onEdit(detail.id)}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                    {canAprobarSolicitudCompra && (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full gap-1 text-red-700 sm:w-auto"
+                          disabled={isWorkflowBusy(detail.id)}
+                          onClick={() => openRechazarConfirm(detail.id)}
+                        >
+                          <Ban className="h-4 w-4 shrink-0" />
+                          Rechazar
+                        </Button>
+                        <Button
+                          type="button"
+                          className="w-full gap-1 sm:w-auto"
+                          disabled={isWorkflowBusy(detail.id)}
+                          onClick={() => openAprobarConfirm(detail.id)}
+                        >
+                          <Check className="h-4 w-4 shrink-0" />
+                          Aprobar
+                        </Button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <div className="flex justify-end">

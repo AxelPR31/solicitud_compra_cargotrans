@@ -6,7 +6,19 @@ const excelJsBrowser = path.join(
   "node_modules/exceljs/dist/exceljs.min.js",
 );
 
+const API_DEV_TARGET =
+  process.env.API_DEV_PROXY_TARGET?.trim() || "http://127.0.0.1:7500";
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    if (process.env.NODE_ENV === "production") return [];
+    return [
+      {
+        source: "/backend/:path*",
+        destination: `${API_DEV_TARGET}/:path*`,
+      },
+    ];
+  },
   webpack: (config) => {
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {

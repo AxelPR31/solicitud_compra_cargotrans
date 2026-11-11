@@ -23,7 +23,8 @@ export class AuthController {
     res.cookie(constants.AUTH_KEY, `Bearer ${response.token}`, {
       httpOnly: true,
       secure: constants.__prod__,
-      sameSite: 'lax', // 🔥 importante
+      sameSite: 'lax',
+      path: '/',
     })
 
     return response.user
@@ -31,7 +32,7 @@ export class AuthController {
 
   @UseGuards(AuthGuard)
   @Get()
-  async me(@User() user: UserPrincipal) {
+  me(@User() user: UserPrincipal) {
     return user
   }
 
@@ -47,6 +48,7 @@ export class AuthController {
       httpOnly: true,
       secure: constants.__prod__,
       sameSite: 'lax',
+      path: '/',
     })
 
     return response.user
@@ -55,7 +57,7 @@ export class AuthController {
   @UseGuards(AuthGuard)
   @Post('/logout')
   async logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(constants.AUTH_KEY)
+    res.clearCookie(constants.AUTH_KEY, { path: '/' })
     return { ok: true }
   }
 }

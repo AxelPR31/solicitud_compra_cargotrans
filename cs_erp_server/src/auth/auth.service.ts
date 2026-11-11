@@ -7,6 +7,7 @@ import { SignInDto } from './dtos/signin.dto'
 import { SoftlandPasswordService } from './softland-password.service'
 import { UsuarioSoftland } from 'src/usuario-softland/entities/usuario-softland.entity'
 import { UserPrincipal } from './types/user-principal'
+import { PermisoUsuarioService } from '../permiso-usuario/permiso-usuario.service'
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
     @Inject(TENANT_CONENCTION) dataSource: DataSource,
     private readonly _jwtService: JwtService,
     private readonly softlandPasswordService: SoftlandPasswordService,
+    private readonly permisoUsuarioService: PermisoUsuarioService,
   ) {
     this.softlandRepository = dataSource.getRepository(UsuarioSoftland)
   }
@@ -51,9 +53,9 @@ export class AuthService {
       )
     }
 
-    const userPrincipal = this.buildSoftlandPrincipal(softlandUser)
-
-    // Nueva lógica: permiso total y usuario de consulta
+    const userPrincipal = await this.permisoUsuarioService.enrichPrincipal(
+      this.buildSoftlandPrincipal(softlandUser),
+    )
 
     const test = constants.EXPIRES_IN
     const token = (this._jwtService.sign as unknown as Function)(
@@ -77,7 +79,9 @@ export class AuthService {
       )
     }
 
-    const userPrincipal = this.buildSoftlandPrincipal(softlandUser)
+    const userPrincipal = await this.permisoUsuarioService.enrichPrincipal(
+      this.buildSoftlandPrincipal(softlandUser),
+    )
 
     const token = (this._jwtService.sign as unknown as Function)(
       {
@@ -98,7 +102,7 @@ export class AuthService {
       idCliente: '',
       caja: '',
       canViewOtherCashiers: false,
-      isAdmin: false,
+      permisosCs: [],
       consecutivo: undefined,
     }
   }

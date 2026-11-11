@@ -8,7 +8,8 @@ export interface AuthUser {
   idCliente?: string
   caja?: string
   canViewOtherCashiers?: boolean
-  isAdmin?: boolean
+  /** Permisos activos en CS_PERMISO_USUARIO */
+  permisosCs?: string[]
   consecutivo?: string
   permisoTotal?: boolean
   esConsulta?: boolean

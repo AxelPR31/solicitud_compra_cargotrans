@@ -6,7 +6,8 @@ export interface UserPrincipal {
   idCliente: string
   caja: string
   canViewOtherCashiers: boolean
-  isAdmin: boolean
+  /** Filas activas en CS_PERMISO_USUARIO (p. ej. ADMIN, APROBAR_OC). */
+  permisosCs: string[]
   permisoTotal?: boolean
   esConsulta?: boolean
   consecutivo?: number

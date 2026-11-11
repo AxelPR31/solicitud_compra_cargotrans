@@ -17,6 +17,7 @@ import constants from '../constants'
 import { UserPrincipal } from 'src/auth/types/user-principal'
 import { Reflector } from '@nestjs/core'
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
+import { PermisoUsuarioService } from 'src/permiso-usuario/permiso-usuario.service'
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -27,6 +28,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly _jwtService: JwtService,
     @Inject(TENANT_CONENCTION) dataSource: DataSource,
+    private readonly permisoUsuarioService: PermisoUsuarioService,
   ) {
     this.softlandRepository = dataSource.getRepository(UsuarioSoftland)
   }
@@ -59,6 +61,21 @@ export class AuthGuard implements CanActivate {
 
     const tokenHeader = request.cookies[constants.AUTH_KEY] as string
     if (!tokenHeader) {
+      const pathOnly = (url ?? '').split('?')[0].replace(/\/+$/, '') || '/'
+      const isSessionProbe =
+        method === 'GET' &&
+        (pathOnly === '/auth' ||
+          pathOnly.endsWith('/auth') ||
+          (controllerName === 'AuthController' && handlerName === 'me'))
+      if (isSessionProbe) {
+        this.logger.log(
+          `ℹ️ Sin cookie de sesión (esperado antes de login) - GET ${url}`,
+        )
+        throw new HttpException(
+          { message: 'Sin sesión activa', code: 'NO_SESSION' },
+          HttpStatus.UNAUTHORIZED,
+        )
+      }
       this.logger.warn(
         `❌ AUTH ERROR: No token found - ${method} ${url} - Controller: ${controllerName}.${handlerName} - IP: ${ip} - Time: ${timestamp}`,
       )
@@ -158,7 +175,7 @@ export class AuthGuard implements CanActivate {
       )
     }
 
-    const user: UserPrincipal = {
+    const baseUser: UserPrincipal = {
       usuario: softlandUser.usuario,
       idUser: 0,
       nombre: softlandUser.nombre,
@@ -166,11 +183,13 @@ export class AuthGuard implements CanActivate {
       idCliente: '',
       caja: '',
       canViewOtherCashiers: false,
-      isAdmin: false,
+      permisosCs: [],
       permisoTotal: payload.permisoTotal === true,
       esConsulta: payload.esConsulta === true,
       consecutivo: undefined,
     }
+
+    const user = await this.permisoUsuarioService.enrichPrincipal(baseUser)
 
     // Calcular duración restante del token para el log de éxito
     const now = Math.floor(Date.now() / 1000)

@@ -35,6 +35,7 @@ import {
   type OrdenCompraFilters,
   type OrdenCompraQuickEstado,
 } from "./orden-compra-filters";
+import { useCanAprobarOrdenCompraQuery } from "@/lib/permisos/use-permisos";
 
 const fetch = (input: RequestInfo | URL, init?: RequestInit) =>
   globalThis.fetch(input, { ...init, credentials: "include" });
@@ -95,6 +96,7 @@ type Props = {
 };
 
 export function OrdenCompraTab({ serverOnline, API_BASE_URL }: Props) {
+  const { canAprobarOrdenCompra } = useCanAprobarOrdenCompraQuery();
   const [page, setPage] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [items, setItems] = useState<OrdenCompra[]>([]);
@@ -220,13 +222,17 @@ export function OrdenCompraTab({ serverOnline, API_BASE_URL }: Props) {
           type="button"
           size="sm"
           variant="outline"
-          className={cn("gap-1", fullWidth && "w-full", fullWidth && row.estado !== "A" && "col-span-2")}
+          className={cn(
+            "gap-1",
+            fullWidth && "w-full",
+            fullWidth && (row.estado !== "A" || !canAprobarOrdenCompra) && "col-span-2",
+          )}
           onClick={() => openDetail(row.ordenCompra)}
         >
           <Eye className="h-4 w-4 shrink-0" />
           {fullWidth ? "Ver detalle" : "Ver"}
         </Button>
-        {row.estado === "A" && (
+        {row.estado === "A" && canAprobarOrdenCompra && (
           <Button
             type="button"
             size="sm"
@@ -660,7 +666,7 @@ export function OrdenCompraTab({ serverOnline, API_BASE_URL }: Props) {
                 <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={closeDetail}>
                   Cerrar
                 </Button>
-                {detail.estado === "A" && (
+                {detail.estado === "A" && canAprobarOrdenCompra && (
                   <Button
                     type="button"
                     className="w-full gap-1 sm:w-auto"
