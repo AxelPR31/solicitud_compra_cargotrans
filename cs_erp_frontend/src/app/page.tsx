@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { AppShell, type NavTab } from '@/components/layout/app-shell'
 import { SolicitudCompraNuevaTab } from '@/components/tabs/solicitud-compra-nueva-tab'
 import { SolicitudCompraHistorialTab } from '@/components/tabs/solicitud-compra-historial-tab'
+import { OrdenCompraTab } from '@/components/tabs/orden-compra-tab'
 import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
 import LoginPage from '@/components/auth/login-page'
@@ -133,6 +134,9 @@ export default function Home() {
             setActiveTab('solicitud-nueva')
           }}
         />
+      )}
+      {activeTab === 'orden-compra' && (
+        <OrdenCompraTab serverOnline={serverOnline} API_BASE_URL={API_BASE_URL} />
       )}
     </AppShell>
   )

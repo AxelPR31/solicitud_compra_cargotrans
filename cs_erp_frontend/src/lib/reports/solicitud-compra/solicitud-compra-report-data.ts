@@ -53,20 +53,25 @@ async function fetchJson<T>(url: string): Promise<T | null> {
   }
 }
 
+type SolicitudCompraReportSource = SolicitudOc & { gerencia?: string };
+
 export async function buildCSReportSolicitudCompraModel(
-  detail: SolicitudOc,
+  detail: SolicitudCompraReportSource,
   API_BASE_URL: string,
   departamentosCache?: Departamento[],
 ): Promise<CS_ReportSolicitudCompraModel> {
-  let gerencia = detail.departamento;
-  const fromCache = departamentosCache?.find(d => d.departamento === detail.departamento);
-  if (fromCache?.descripcion) {
-    gerencia = fromCache.descripcion;
-  } else {
-    const dep = await fetchJson<Departamento>(
-      `${API_BASE_URL}/departamento/${encodeURIComponent(detail.departamento)}`,
-    );
-    if (dep?.descripcion) gerencia = dep.descripcion;
+  let gerencia = detail.gerencia?.trim() || "";
+  if (!gerencia) {
+    gerencia = detail.departamento;
+    const fromCache = departamentosCache?.find(d => d.departamento === detail.departamento);
+    if (fromCache?.descripcion) {
+      gerencia = fromCache.descripcion;
+    } else {
+      const dep = await fetchJson<Departamento>(
+        `${API_BASE_URL}/departamento/${encodeURIComponent(detail.departamento)}`,
+      );
+      if (dep?.descripcion) gerencia = dep.descripcion;
+    }
   }
 
   const centroDesc = new Map<string, string>();

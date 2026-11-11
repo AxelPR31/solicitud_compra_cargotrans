@@ -19,6 +19,7 @@ import { DepartamentoService } from '../departamento/departamento.service'
 import { isCsWorkflowEstado } from './types/cs-workflow-estado.type'
 
 import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
+import { rollbackOrRethrow } from '../core/sql/rollback-or-rethrow'
 
 @Injectable()
 export class CsSolicitudOcService {
@@ -131,6 +132,7 @@ export class CsSolicitudOcService {
       chasis: headerData.chasis || null,
       marca: headerData.marca || null,
       modelo: headerData.modelo || null,
+      gerencia: headerData.gerencia || null,
       createdBy,
       updatedBy: createdBy,
       createDate: now,
@@ -309,6 +311,7 @@ export class CsSolicitudOcService {
         chasis: headerData.chasis ?? existing.chasis,
         marca: headerData.marca ?? existing.marca,
         modelo: headerData.modelo ?? existing.modelo,
+        gerencia: headerData.gerencia ?? existing.gerencia,
         recordDate: now,
       })
     }
@@ -374,8 +377,7 @@ export class CsSolicitudOcService {
 
       await queryRunner.commitTransaction()
     } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
+      await rollbackOrRethrow(queryRunner, err, 'CsSolicitudOcService.aprobar')
     } finally {
       await queryRunner.release()
     }

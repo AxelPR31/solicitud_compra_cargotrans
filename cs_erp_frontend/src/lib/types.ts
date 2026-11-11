@@ -114,7 +114,66 @@ export interface CsSolicitudOc {
   chasis?: string
   marca?: string
   modelo?: string
+  gerencia?: string
   lineas?: CsSolicitudOcLinea[]
+}
+
+/** Valores Softland de ORDEN_COMPRA.ESTADO */
+export type OrdenCompraEstado = 'A' | 'E' | 'I' | 'N' | 'O' | 'P' | 'R'
+
+export const ORDEN_COMPRA_ESTADOS: { value: OrdenCompraEstado; label: string }[] = [
+  { value: 'A', label: 'Planeada' },
+  { value: 'E', label: 'Tránsito' },
+  { value: 'I', label: 'Backorder' },
+  { value: 'N', label: 'No aprobada' },
+  { value: 'O', label: 'Cancelada' },
+  { value: 'P', label: 'Por aprobar' },
+  { value: 'R', label: 'Recibida' },
+]
+
+export interface OrdenCompraLinea {
+  ordenCompra: string
+  ordenCompraLinea: number
+  articulo: string
+  bodega: string
+  descripcion?: string | null
+  cantidadOrdenada: number
+  precioUnitario: number
+  impuesto1: number
+  montoDescuento: number
+  estado: string
+  comentario?: string | null
+  fechaRequerida?: string
+  unidadDistribucio?: string | null
+  centroCosto?: string | null
+  cuentaContable?: string | null
+}
+
+export interface OrdenCompra {
+  ordenCompra: string
+  usuario?: string | null
+  proveedor: string
+  proveedorNombre?: string | null
+  bodega: string
+  condicionPago: string
+  moneda: string
+  departamento?: string | null
+  fecha: string
+  fechaCotizacion?: string | null
+  fechaRequerida: string
+  totalMercaderia: number
+  totalImpuesto1: number
+  montoDescuento?: number | null
+  totalAComprar: number
+  prioridad: string
+  estado: OrdenCompraEstado
+  instrucciones?: string | null
+  observaciones?: string | null
+  confirmada: string
+  usuarioConfirma?: string | null
+  fechaHoraConfir?: string | null
+  fechaHora?: string
+  lineas?: OrdenCompraLinea[]
 }
 
 export interface SolicitudOc {

@@ -930,6 +930,9 @@ export function SolicitudCompraHistorialCsPanel({
                   </div>
                   <dl className="grid gap-3 sm:grid-cols-2 text-sm">
                     <div><dt className="text-slate-400 text-xs">Departamento</dt><dd>{detail.departamento}</dd></div>
+                    {detail.gerencia?.trim() && (
+                      <div><dt className="text-slate-400 text-xs">Gerencia</dt><dd>{detail.gerencia.trim()}</dd></div>
+                    )}
                     <div><dt className="text-slate-400 text-xs">Solicitante</dt><dd>{detail.usuarioSolicita ?? "—"}</dd></div>
                     <div><dt className="text-slate-400 text-xs">Fecha solicitud</dt><dd>{formatDate(detail.fechaSolicitud)}</dd></div>
                     <div><dt className="text-slate-400 text-xs">Fecha requerida</dt><dd>{formatDate(detail.fechaRequerida)}</dd></div>

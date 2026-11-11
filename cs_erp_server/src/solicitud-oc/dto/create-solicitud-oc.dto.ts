@@ -35,5 +35,6 @@ export class CreateSolicitudOcDto {
   chasis?: string
   marca?: string
   modelo?: string
+  gerencia?: string
   lineas: CreateSolicitudOcLineaDto[]
 }

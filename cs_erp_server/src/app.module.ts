@@ -25,6 +25,8 @@ import {
 import { CsSolicitudOc } from './cs-solicitud-oc/entities/cs-solicitud-oc.entity'
 import { CsSolicitudOcLinea } from './cs-solicitud-oc/entities/cs-solicitud-oc-linea.entity'
 import { CsSolicitudOcModule } from './cs-solicitud-oc/cs-solicitud-oc.module'
+import { CsDatabaseModule } from './cs-database/cs-database.module'
+import { OrdenCompraModule } from './orden-compra/orden-compra.module'
 
 @Module({
   imports: [
@@ -74,6 +76,8 @@ import { CsSolicitudOcModule } from './cs-solicitud-oc/cs-solicitud-oc.module'
     ArticuloCuentaModule,
     SolicitudOcModule,
     CsSolicitudOcModule,
+    CsDatabaseModule,
+    OrdenCompraModule,
     UsuarioSoftlandModule,
   ],
   controllers: [AppController],

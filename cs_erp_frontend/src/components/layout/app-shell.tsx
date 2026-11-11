@@ -22,6 +22,11 @@ const tabTitles: Record<NavTab, { title: string; subtitle: string; breadcrumb?: 
     title: "Historial de Solicitudes",
     breadcrumb: "Historial",
   },
+  "orden-compra": {
+    subtitle: "Módulo de Compras",
+    title: "Órdenes de Compra",
+    breadcrumb: "Órdenes de compra",
+  },
 };
 
 export function AppShell({

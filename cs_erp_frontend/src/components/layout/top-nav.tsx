@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { FileText, History, LogOut, ChevronDown } from "lucide-react";
+import { FileText, History, LogOut, ChevronDown, ClipboardCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth/context";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
-export type NavTab = "solicitud-nueva" | "solicitud-historial";
+export type NavTab = "solicitud-nueva" | "solicitud-historial" | "orden-compra";
 
 interface TopNavProps {
   activeTab: NavTab;
@@ -21,6 +21,7 @@ const navItems: {
 }[] = [
   { id: "solicitud-nueva", label: "Nueva Solicitud", shortLabel: "Nueva", icon: FileText },
   { id: "solicitud-historial", label: "Historial", shortLabel: "Historial", icon: History },
+  { id: "orden-compra", label: "Órdenes de Compra", shortLabel: "OC", icon: ClipboardCheck },
 ];
 
 const getInitials = (name?: string) => {

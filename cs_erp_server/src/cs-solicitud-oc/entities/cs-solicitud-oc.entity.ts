@@ -77,6 +77,9 @@ export class CsSolicitudOc {
   @Column({ name: 'U_MODELO', nullable: true, length: 150 })
   modelo: string | null
 
+  @Column({ name: 'U_GERENCIA', nullable: true, length: 150 })
+  gerencia: string | null
+
   @Column({ name: 'CreatedBy', nullable: true })
   createdBy: string | null
 

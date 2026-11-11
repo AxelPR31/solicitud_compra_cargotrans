@@ -66,6 +66,7 @@ export function SolicitudCompraNuevaTab({
   const [cuentasPorLinea, setCuentasPorLinea] = useState<Record<number, any[]>>({});
 
   const [departamento, setDepartamento] = useState("");
+  const [gerencia, setGerencia] = useState("");
   const [fechaSolicitud, setFechaSolicitud] = useState(() => todayDateInNicaragua());
   const [fechaRequerida, setFechaRequerida] = useState(new Date().toISOString().split("T")[0]);
   const [prioridad, setPrioridad] = useState<SolicitudOcPrioridad>("M");
@@ -106,7 +107,10 @@ export function SolicitudCompraNuevaTab({
         if (depRes.ok) {
           const deps = await depRes.json();
           setDepartamentos(deps);
-          if (deps.length > 0 && !departamento) setDepartamento(deps[0].departamento);
+          if (deps.length > 0 && !departamento) {
+            setDepartamento(deps[0].departamento);
+            if (deps[0].descripcion?.trim()) setGerencia(deps[0].descripcion.trim());
+          }
         }
         if (globRes.ok) setGlobalesCo(await globRes.json());
         if (ccRes?.ok) setCentroCostos(await ccRes.json());
@@ -131,6 +135,7 @@ export function SolicitudCompraNuevaTab({
       const detail = await res.json();
       setEditingCsId(detail.id);
       setDepartamento(detail.departamento);
+      setGerencia(detail.gerencia || "");
       setFechaSolicitud(toDateInputValueInNicaragua(detail.fechaSolicitud));
       setFechaRequerida(detail.fechaRequerida ? new Date(detail.fechaRequerida).toISOString().split("T")[0] : "");
       setPrioridad(detail.prioridad ?? "M");
@@ -378,7 +383,9 @@ export function SolicitudCompraNuevaTab({
   const resetForm = () => {
     setEditingCsId(null);
     onClearEdit();
-    setDepartamento(departamentos[0]?.departamento || "");
+    const depDefault = departamentos[0];
+    setDepartamento(depDefault?.departamento || "");
+    setGerencia(depDefault?.descripcion?.trim() || "");
     setFechaSolicitud(todayDateInNicaragua());
     setFechaRequerida(new Date().toISOString().split("T")[0]);
     setPrioridad("M");
@@ -427,6 +434,7 @@ export function SolicitudCompraNuevaTab({
         rubro3: rubro3 || null,
         rubro4: rubro4 || null,
         rubro5: rubro5 || null,
+        gerencia: gerencia.trim() || null,
         ...(CS_ENCABEZADO_VEHICULO_HABILITADO
           ? {
               placa: placa || null,
@@ -499,12 +507,29 @@ export function SolicitudCompraNuevaTab({
           <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label required>Departamento</Label>
-              <NativeSelect value={departamento} onChange={e => setDepartamento(e.target.value)} required>
+              <NativeSelect
+                value={departamento}
+                onChange={e => {
+                  const code = e.target.value;
+                  setDepartamento(code);
+                  const dep = departamentos.find(d => d.departamento === code);
+                  if (dep?.descripcion?.trim()) setGerencia(dep.descripcion.trim());
+                }}
+                required
+              >
                 <option value="">Seleccione...</option>
                 {departamentos.map(d => (
                   <option key={d.departamento} value={d.departamento}>{d.departamento} - {d.descripcion}</option>
                 ))}
               </NativeSelect>
+            </div>
+            <div>
+              <Label optional>Gerencia</Label>
+              <Input
+                value={gerencia}
+                maxLength={150}
+                onChange={e => setGerencia(e.target.value)}
+              />
             </div>
             <div>
               <Label optional>Fecha Solicitud</Label>

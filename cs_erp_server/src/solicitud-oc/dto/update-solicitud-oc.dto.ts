@@ -22,5 +22,6 @@ export class UpdateSolicitudOcDto {
   chasis?: string
   marca?: string
   modelo?: string
+  gerencia?: string
   lineas?: CreateSolicitudOcLineaDto[]
 }

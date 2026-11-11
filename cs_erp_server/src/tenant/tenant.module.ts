@@ -21,6 +21,12 @@ import { SolicitudOc } from '../solicitud-oc/entities/solicitud-oc.entity'
 import { SolicitudOcLinea } from '../solicitud-oc-linea/entities/solicitud-oc-linea.entity'
 import { Departamento } from '../departamento/entities/departamento.entity'
 import { ArticuloCuenta } from '../articulo-cuenta/entities/articulo-cuenta.entity'
+import { OrdenCompra } from '../orden-compra/entities/orden-compra.entity'
+import { OrdenCompraLinea } from '../orden-compra/entities/orden-compra-linea.entity'
+import { ArticuloCompra } from '../orden-compra/entities/articulo-compra.entity'
+import { ExistenciaBodega } from '../orden-compra/entities/existencia-bodega.entity'
+import { UsuarioAprobOc } from '../orden-compra/entities/usuario-aprob-oc.entity'
+import { Proveedor } from '../orden-compra/entities/proveedor.entity'
 
 export const DATABASE_NAME =
   process.env.DATABASE_NAME?.trim() ||
@@ -80,6 +86,12 @@ export class TenantModule {
                 SolicitudOcLinea,
                 Departamento,
                 ArticuloCuenta,
+                OrdenCompra,
+                OrdenCompraLinea,
+                ArticuloCompra,
+                ExistenciaBodega,
+                UsuarioAprobOc,
+                Proveedor,
               ],
               synchronize: false,
               options: {

@@ -14,31 +14,35 @@ import {
 } from '@/components/ui/tooltip'
 
 type Primitive = string | number
-type Item = Record<string, any>
+type ComboItem = object
 
-interface Props {
+function fieldValue(item: object, key: string): unknown {
+  return (item as Record<string, unknown>)[key]
+}
+
+interface Props<T extends ComboItem> {
   label?: string
   value?: Primitive
   onChange: (value: Primitive) => void
 
   clearable?: boolean
-  options: Item[]
+  options: T[]
 
   displayKey: string
   valueKey: string
   placeholder?: string
   fallbackLabel?: string
-  formatOptionLabel?: (item: Item) => string
-  formatOptionParts?: (item: Item) => { code: string; description: string }
+  formatOptionLabel?: (item: T) => string
+  formatOptionParts?: (item: T) => { code: string; description: string }
   tooltipKey?: string
   maxLabelLength?: number
   disabled?: boolean
-  onSearch?: (search: string) => Promise<Item[]> | any
+  onSearch?: (search: string) => Promise<T[]> | any
   /** En el botón cerrado muestra solo el código (evita cortar descripciones largas). */
   preferCodeInTrigger?: boolean
 }
 
-export function SelectorRelacionalComboBox({
+export function SelectorRelacionalComboBox<T extends ComboItem>({
   label,
   value,
   onChange,
@@ -55,10 +59,10 @@ export function SelectorRelacionalComboBox({
   disabled = false,
   onSearch,
   preferCodeInTrigger = false,
-}: Props) {
+}: Props<T>) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [localOptions, setLocalOptions] = useState<Item[]>(options)
+  const [localOptions, setLocalOptions] = useState<T[]>(options)
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -86,8 +90,8 @@ export function SelectorRelacionalComboBox({
     if (!search.trim()) return options
     const searchLower = search.toLowerCase()
     return options.filter((item) => {
-      const displayValue = safeToString(item[displayKey]).toLowerCase()
-      const valueValue = safeToString(item[valueKey]).toLowerCase()
+      const displayValue = safeToString(fieldValue(item, displayKey)).toLowerCase()
+      const valueValue = safeToString(fieldValue(item, valueKey)).toLowerCase()
       const parts = formatOptionParts ? formatOptionParts(item) : null
       const descriptionValue = parts?.description?.toLowerCase() ?? ''
       const codeValue = parts?.code?.toLowerCase() ?? ''
@@ -101,23 +105,23 @@ export function SelectorRelacionalComboBox({
   }, [options, localOptions, search, displayKey, valueKey, onSearch, formatOptionParts])
 
   const selectedItem = useMemo(() => {
-    let found = options.find((i) => safeToString(i[valueKey]) === valueStr)
+    let found = options.find((i) => safeToString(fieldValue(i, valueKey)) === valueStr)
     if (!found) {
-      found = localOptions.find((i) => safeToString(i[valueKey]) === valueStr)
+      found = localOptions.find((i) => safeToString(fieldValue(i, valueKey)) === valueStr)
     }
     return found
   }, [options, localOptions, valueStr, valueKey])
 
-  const renderLabel = (item: Item): string => {
+  const renderLabel = (item: T): string => {
     if (formatOptionParts) {
       const { code, description } = formatOptionParts(item)
       return description ? `${code} - ${description}` : code
     }
     if (formatOptionLabel) return formatOptionLabel(item)
-    return safeToString(item[displayKey])
+    return safeToString(fieldValue(item, displayKey))
   }
 
-  const renderOptionParts = (item: Item) => {
+  const renderOptionParts = (item: T) => {
     if (formatOptionParts) return formatOptionParts(item)
     const label = renderLabel(item)
     return { code: label, description: '' }
@@ -132,7 +136,7 @@ export function SelectorRelacionalComboBox({
       : placeholder
 
   const selectedLabel = truncateLabel(rawSelectedLabel, maxLabelLength)
-  const tooltipLabel = selectedItem && tooltipKey ? safeToString(selectedItem[tooltipKey]) : ''
+  const tooltipLabel = selectedItem && tooltipKey ? safeToString(fieldValue(selectedItem, tooltipKey)) : ''
   const tooltipText = tooltipLabel || rawSelectedLabel
   const shouldShowTooltip =
     Boolean(maxLabelLength) &&
@@ -166,7 +170,7 @@ export function SelectorRelacionalComboBox({
           if (res instanceof Promise) {
             const data = await res
             if (Array.isArray(data)) {
-              setLocalOptions(data)
+              setLocalOptions(data as T[])
             }
           }
         }
@@ -342,7 +346,7 @@ export function SelectorRelacionalComboBox({
               </div>
             ) : (
               filteredOptions.map((item, idx) => {
-                const itemValue = safeToString(item[valueKey])
+                const itemValue = safeToString(fieldValue(item, valueKey))
                 const isSelected = itemValue === valueStr
                 const optionParts = formatOptionParts ? renderOptionParts(item) : null
 

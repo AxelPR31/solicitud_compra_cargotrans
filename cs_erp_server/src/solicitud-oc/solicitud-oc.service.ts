@@ -19,6 +19,7 @@ import { CuentacontableService } from '../mantenimientos/cuenta-contable/cuenta-
 import { Articulo } from '../articulo/entities/articulo.entity'
 import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
 import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
+import { rollbackOrRethrow } from '../core/sql/rollback-or-rethrow'
 
 /** Si false, centro/cuenta en línea se guardan tal cual (null si no vienen); no se resuelve cuenta por artículo. */
 const CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA = false
@@ -394,8 +395,7 @@ export class SolicitudOcService {
       await queryRunner.commitTransaction()
       return this.findOne(solicitudOc)
     } catch (err) {
-      await queryRunner.rollbackTransaction()
-      throw err
+      await rollbackOrRethrow(queryRunner, err, 'SolicitudOcService.update')
     } finally {
       await queryRunner.release()
     }
