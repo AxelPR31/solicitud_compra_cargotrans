@@ -7,6 +7,7 @@ import { SolicitudCompraHistorialTab } from '@/components/tabs/solicitud-compra-
 import { OrdenCompraTab } from '@/components/tabs/orden-compra-tab'
 import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
+import { useCanAprobarOrdenCompraQuery } from '@/lib/permisos/use-permisos'
 import LoginPage from '@/components/auth/login-page'
 import { API_BASE_URL } from '@/lib/api-base-url'
 import {
@@ -19,6 +20,8 @@ const fetch = (input: RequestInfo | URL, init?: RequestInit) =>
 
 export default function Home() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth()
+  const { canAprobarOrdenCompra, isLoading: permisosOcLoading } =
+    useCanAprobarOrdenCompraQuery()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<NavTab>('solicitud-nueva')
   const [serverOnline, setServerOnline] = useState(false)
@@ -27,6 +30,13 @@ export default function Home() {
   const [historialRefreshKey, setHistorialRefreshKey] = useState(0)
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    if (permisosOcLoading) return
+    if (activeTab === 'orden-compra' && !canAprobarOrdenCompra) {
+      setActiveTab('solicitud-historial')
+    }
+  }, [activeTab, canAprobarOrdenCompra, permisosOcLoading])
 
   useEffect(() => {
     if (!mounted) return
@@ -135,7 +145,7 @@ export default function Home() {
           }}
         />
       )}
-      {activeTab === 'orden-compra' && (
+      {activeTab === 'orden-compra' && canAprobarOrdenCompra && (
         <OrdenCompraTab serverOnline={serverOnline} API_BASE_URL={API_BASE_URL} />
       )}
     </AppShell>

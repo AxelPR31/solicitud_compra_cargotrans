@@ -6,6 +6,7 @@ import { FileText, History, LogOut, ChevronDown, ClipboardCheck, Shield } from "
 import { useAuth } from "@/lib/auth/context";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { PermisosConfigDialog } from "@/components/permisos/permisos-config-dialog";
+import { useCanAprobarOrdenCompraQuery } from "@/lib/permisos/use-permisos";
 
 export type NavTab = "solicitud-nueva" | "solicitud-historial" | "orden-compra";
 
@@ -38,7 +39,13 @@ const getInitials = (name?: string) => {
 
 export function TopNav({ activeTab, onTabChange, serverOnline }: TopNavProps) {
   const { user, logout, canManagePermisos } = useAuth();
+  const { canAprobarOrdenCompra, isLoading: permisosOcLoading } =
+    useCanAprobarOrdenCompraQuery();
   const [permisosOpen, setPermisosOpen] = useState(false);
+
+  const visibleNavItems = navItems.filter(
+    (item) => item.id !== "orden-compra" || canAprobarOrdenCompra,
+  );
 
   return (
     <nav
@@ -83,7 +90,7 @@ export function TopNav({ activeTab, onTabChange, serverOnline }: TopNavProps) {
           Módulo de Compras
         </p>
         <ul className="flex w-full flex-1 flex-wrap gap-1.5 sm:w-auto sm:justify-center">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;
             return (
@@ -91,6 +98,7 @@ export function TopNav({ activeTab, onTabChange, serverOnline }: TopNavProps) {
                 <button
                   type="button"
                   onClick={() => onTabChange(item.id)}
+                  disabled={item.id === "orden-compra" && permisosOcLoading}
                   className={cn(
                     "flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 cursor-pointer outline-none sm:px-4",
                     isActive
