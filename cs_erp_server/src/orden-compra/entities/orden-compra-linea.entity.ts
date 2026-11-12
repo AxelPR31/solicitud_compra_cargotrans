@@ -35,6 +35,15 @@ export class OrdenCompraLinea {
   @Column({ name: 'COMENTARIO', nullable: true })
   comentario: string | null
 
+  @Column({
+    name: 'FACTOR_CONVERSION',
+    type: 'decimal',
+    precision: 28,
+    scale: 8,
+    nullable: true,
+  })
+  factorConversion: number | null
+
   @Column({ name: 'FECHA_REQUERIDA', type: 'datetime' })
   fechaRequerida: Date
 

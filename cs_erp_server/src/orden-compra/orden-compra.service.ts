@@ -19,6 +19,17 @@ import { rollbackOrRethrow } from '../core/sql/rollback-or-rethrow'
 
 const ZONA_HORARIA_NEGOCIO = 'America/Managua'
 
+/** Cantidad que suma a CANT_TRANSITO: ordenada × factor de la línea (factor 1 si null/ inválido). */
+function cantidadTransitoParaExistencia(linea: OrdenCompraLinea): number {
+  const cantidad = Number(linea.cantidadOrdenada)
+  const raw = linea.factorConversion
+  const factor =
+    raw !== null && raw !== undefined && Number.isFinite(Number(raw))
+      ? Number(raw)
+      : 1
+  return cantidad * factor
+}
+
 function hoySinHora(now: Date): Date {
   const ymd = new Intl.DateTimeFormat('en-CA', {
     timeZone: ZONA_HORARIA_NEGOCIO,
@@ -191,7 +202,7 @@ export class OrdenCompraService {
           .createQueryBuilder()
           .update(ExistenciaBodega)
           .set({ cantTransito: () => 'CANT_TRANSITO + :cantidad' })
-          .setParameter('cantidad', Number(linea.cantidadOrdenada))
+          .setParameter('cantidad', cantidadTransitoParaExistencia(linea))
           .where('BODEGA = :bodega AND ARTICULO = :articulo', {
             bodega: linea.bodega,
             articulo: linea.articulo,
