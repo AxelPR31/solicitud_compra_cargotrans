@@ -78,6 +78,6 @@ Colocarla como **primera** regla dentro de `<rules>`.
 
 Coinciden con los controladores Nest:
 
-`auth`, `solicitud-oc`, `globales-co`, `departamento`, `centrocosto`, `centro-cuenta`, `cuentacontable`, `articulo`, `articulo-cuenta`, `usuario-softland`, `tenant`, `docs`
+`auth`, `cs-solicitud-oc`, `solicitud-oc`, `orden-compra`, `permiso-usuario`, `globales-co`, `departamento`, `centrocosto`, `centro-cuenta`, `cuentacontable`, `articulo`, `articulo-cuenta`, `usuario-softland`, `tenant`, `docs`
 
 Cualquier otra ruta (`/`, `/_next/static/...`, archivos en `public/`) va a Next.js.
