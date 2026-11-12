@@ -1,0 +1,14 @@
+/** Deben coincidir con POSCS.CS_PERMISO_USUARIO.PERMISO */
+export const PERMISO_CS_ADMIN = 'ADMIN' as const
+export const PERMISO_CS_REGISTRAR_SOLICITUD = 'REGISTRAR_SOLICITUD' as const
+export const PERMISO_CS_APROBAR_SOLICITUD = 'APROBAR_SOLICITUD' as const
+export const PERMISO_CS_APROBAR_OC = 'APROBAR_OC' as const
+
+export const PERMISOS_CS_CODIGOS = [
+  PERMISO_CS_ADMIN,
+  PERMISO_CS_REGISTRAR_SOLICITUD,
+  PERMISO_CS_APROBAR_SOLICITUD,
+  PERMISO_CS_APROBAR_OC,
+] as const
+
+export type PermisoCsCodigo = (typeof PERMISOS_CS_CODIGOS)[number]
