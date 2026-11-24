@@ -1,7 +1,7 @@
 import type { Articulo } from "@/lib/types";
 
 /** Centro de costo en líneas del formulario. */
-export const CS_LINEAS_CENTRO_COSTO_HABILITADO = true;
+export const CS_LINEAS_CENTRO_COSTO_HABILITADO = false;
 
 /** Cuenta contable en líneas (desactivado: siempre null al guardar). */
 export const CS_LINEAS_CUENTA_CONTABLE_HABILITADO = false;

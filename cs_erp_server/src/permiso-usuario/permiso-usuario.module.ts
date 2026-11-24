@@ -1,11 +1,16 @@
 import { Module, forwardRef } from '@nestjs/common'
-import { TenantModule } from '../tenant/tenant.module'
+import { TypeOrmModule } from '@nestjs/typeorm'
 import { AuthModule } from '../auth/auth.module'
+import { UsuarioSoftland } from '../usuario-softland/entities/usuario-softland.entity'
+import { CsPermisoUsuario } from './entities/cs-permiso-usuario.entity'
 import { PermisoUsuarioService } from './permiso-usuario.service'
 import { PermisoUsuarioController } from './permiso-usuario.controller'
 
 @Module({
-  imports: [TenantModule, forwardRef(() => AuthModule)],
+  imports: [
+    TypeOrmModule.forFeature([CsPermisoUsuario, UsuarioSoftland]),
+    forwardRef(() => AuthModule),
+  ],
   controllers: [PermisoUsuarioController],
   providers: [PermisoUsuarioService],
   exports: [PermisoUsuarioService],

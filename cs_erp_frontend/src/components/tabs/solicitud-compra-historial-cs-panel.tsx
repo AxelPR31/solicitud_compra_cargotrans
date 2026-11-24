@@ -63,6 +63,37 @@ const workflowBadge = (estado: CsWorkflowEstado) => {
   return <Badge variant="outline" className="text-slate-500">{workflowLabel(estado)}</Badge>;
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("es-CR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const diasPlural = (n: number) => `${n} día${n === 1 ? "" : "s"}`;
+
+const textoDias = (row: CsSolicitudOc): string => {
+  const n = row.diasEspera;
+  if (n == null) return "—";
+  if (row.workflowEstado === "PLANEADA") return n === 0 ? "Hoy" : `En espera: ${diasPlural(n)}`;
+  if (row.workflowEstado === "APROBADA") return `Aprobada en ${diasPlural(n)}`;
+  return `Rechazada en ${diasPlural(n)}`;
+};
+
+const diasClassName = (row: CsSolicitudOc): string => {
+  const n = row.diasEspera;
+  if (row.workflowEstado !== "PLANEADA" || n == null) return "text-slate-600";
+  if (n >= 7) return "font-semibold text-red-700";
+  if (n >= 3) return "font-medium text-amber-700";
+  return "text-slate-600";
+};
+
 const prioridadLabel = (prioridad: string) =>
   SOLICITUD_OC_PRIORIDADES.find(p => p.value === prioridad)?.label ?? prioridad;
 
@@ -724,6 +755,10 @@ export function SolicitudCompraHistorialCsPanel({
                         <dd className="text-slate-700">{formatDate(row.fechaSolicitud)}</dd>
                       </div>
                       <div className="col-span-2">
+                        <dt className="text-slate-400">Días</dt>
+                        <dd className={diasClassName(row)}>{textoDias(row)}</dd>
+                      </div>
+                      <div className="col-span-2">
                         <dt className="text-slate-400">Softland</dt>
                         <dd className="font-mono text-slate-700">{row.solicitudOcSoftland ?? "—"}</dd>
                       </div>
@@ -741,6 +776,7 @@ export function SolicitudCompraHistorialCsPanel({
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 whitespace-nowrap">Estado</th>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 whitespace-nowrap">Depto.</th>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 whitespace-nowrap">F. solicitud</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 whitespace-nowrap">Días</th>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase text-slate-500 whitespace-nowrap">Softland</th>
                       <th className="px-4 py-3 text-right text-xs font-medium uppercase text-slate-500 whitespace-nowrap">Acción</th>
                     </tr>
@@ -752,6 +788,7 @@ export function SolicitudCompraHistorialCsPanel({
                         <td className="px-4 py-3 whitespace-nowrap">{workflowBadge(row.workflowEstado)}</td>
                         <td className="px-4 py-3 text-sm">{row.departamento}</td>
                         <td className="px-4 py-3 text-sm whitespace-nowrap">{formatDate(row.fechaSolicitud)}</td>
+                        <td className={cn("px-4 py-3 text-sm whitespace-nowrap", diasClassName(row))}>{textoDias(row)}</td>
                         <td className="px-4 py-3 font-mono text-sm whitespace-nowrap">{row.solicitudOcSoftland ?? "—"}</td>
                         <td className="px-4 py-3">{renderRowActions(row, "table")}</td>
                       </tr>
@@ -941,6 +978,20 @@ export function SolicitudCompraHistorialCsPanel({
                     )}
                     <div><dt className="text-slate-400 text-xs">Solicitante</dt><dd>{detail.usuarioSolicita ?? "—"}</dd></div>
                     <div><dt className="text-slate-400 text-xs">Fecha solicitud</dt><dd>{formatDate(detail.fechaSolicitud)}</dd></div>
+                    <div>
+                      <dt className="text-slate-400 text-xs">
+                        {detail.workflowEstado === "PLANEADA" ? "Días en espera" : "Tiempo de aprobación"}
+                      </dt>
+                      <dd className={diasClassName(detail)}>{textoDias(detail)}</dd>
+                    </div>
+                    {detail.workflowEstado !== "PLANEADA" && detail.fechaAprobacion && (
+                      <div>
+                        <dt className="text-slate-400 text-xs">
+                          {detail.workflowEstado === "APROBADA" ? "Fecha aprobación" : "Fecha rechazo"}
+                        </dt>
+                        <dd>{formatDateTime(detail.fechaAprobacion)}</dd>
+                      </div>
+                    )}
                     <div><dt className="text-slate-400 text-xs">Fecha requerida</dt><dd>{formatDate(detail.fechaRequerida)}</dd></div>
                     {detail.solicitudOcSoftland && (
                       <div><dt className="text-slate-400 text-xs">Softland</dt><dd className="font-mono">{detail.solicitudOcSoftland}</dd></div>

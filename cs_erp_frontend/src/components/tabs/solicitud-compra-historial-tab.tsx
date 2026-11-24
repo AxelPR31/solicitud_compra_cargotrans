@@ -47,6 +47,7 @@ import {
   validateHistorialFiltersForApply,
   type HistorialFilters,
 } from "./solicitud-compra-historial-filters";
+import { useCanAprobarSolicitudCompraQuery } from "@/lib/permisos/use-permisos";
 import { SolicitudCompraHistorialCsPanel } from "./solicitud-compra-historial-cs-panel";
 import { SelectorRelacionalComboBox } from "@/components/ui/selector-relacional-combobox";
 
@@ -133,6 +134,8 @@ export function SolicitudCompraHistorialTab({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [exportingReport, setExportingReport] = useState<"pdf" | "excel" | "print" | null>(null);
   const [bandeja, setBandeja] = useState<"planeadas" | "softland">("planeadas");
+  const { canAprobarSolicitudCompra: puedeVerTodas, isLoading: verTodasLoading } =
+    useCanAprobarSolicitudCompraQuery();
   const [departamentos, setDepartamentos] = useState<Departamento[]>([]);
   const [solicitudCatalog, setSolicitudCatalog] = useState<SolicitudOc[]>([]);
 
@@ -570,6 +573,9 @@ export function SolicitudCompraHistorialTab({
         >
           En Softland
         </Button>
+        {!verTodasLoading && !puedeVerTodas && (
+          <span className="self-center text-xs text-slate-500">Mostrando solo tus solicitudes</span>
+        )}
       </div>
 
       {bandeja === "planeadas" ? (

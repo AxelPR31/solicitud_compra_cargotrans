@@ -36,3 +36,14 @@ export function canAprobarOrdenCompra(user: AuthUser | null | undefined): boolea
   const codes = user?.permisosCs ?? []
   return hasCode(codes, PERMISO_CS_ADMIN) || hasCode(codes, PERMISO_CS_APROBAR_OC)
 }
+
+/** Al menos un permiso del sistema. Sin ninguno, no entra. */
+export function tieneAlgunPermisoSistema(user: AuthUser | null | undefined): boolean {
+  const codes = user?.permisosCs ?? []
+  return (
+    hasCode(codes, PERMISO_CS_ADMIN) ||
+    hasCode(codes, PERMISO_CS_REGISTRAR_SOLICITUD) ||
+    hasCode(codes, PERMISO_CS_APROBAR_SOLICITUD) ||
+    hasCode(codes, PERMISO_CS_APROBAR_OC)
+  )
+}

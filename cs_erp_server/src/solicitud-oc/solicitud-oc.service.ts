@@ -20,6 +20,7 @@ import { Articulo } from '../articulo/entities/articulo.entity'
 import { EstadoSolicitudOc } from './types/estado-solicitud-oc.type'
 import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
 import { rollbackOrRethrow } from '../core/sql/rollback-or-rethrow'
+import { esSolicitudDeUsuario } from '../permiso-usuario/solicitud-visibilidad'
 
 /** Si false, centro/cuenta en línea se guardan tal cual (null si no vienen); no se resuelve cuenta por artículo. */
 const CS_RESOLVER_CUENTA_POR_ARTICULO_EN_LINEA = false
@@ -208,7 +209,7 @@ export class SolicitudOcService {
     }
   }
 
-  async findAll(query: FindSolicitudOcDto) {
+  async findAll(query: FindSolicitudOcDto, soloUsuario?: string | null) {
     const {
       limit = 50,
       offset = 0,
@@ -233,6 +234,10 @@ export class SolicitudOcService {
       .addOrderBy('s.solicitudOc', 'DESC')
       .take(limit)
       .skip(offset)
+
+    if (soloUsuario) {
+      qb.andWhere('UPPER(RTRIM(s.usuario)) = :soloUsuario', { soloUsuario })
+    }
 
     const search = q?.trim()
     if (search) {
@@ -300,9 +305,9 @@ export class SolicitudOcService {
     return { items, total, limit, offset }
   }
 
-  async findOne(solicitudOc: string) {
+  async findOne(solicitudOc: string, soloUsuario?: string | null) {
     const header = await this.repository.findOneBy({ solicitudOc })
-    if (!header) {
+    if (!header || (soloUsuario && !esSolicitudDeUsuario(header.usuario, soloUsuario))) {
       throw new NotFoundException(`Solicitud ${solicitudOc} no encontrada`)
     }
     const lineasRepo = this.dataSource.getRepository(SolicitudOcLinea)
@@ -313,8 +318,8 @@ export class SolicitudOcService {
     return { ...header, lineas }
   }
 
-  async update(solicitudOc: string, updateDto: UpdateSolicitudOcDto) {
-    const existing = await this.findOne(solicitudOc)
+  async update(solicitudOc: string, updateDto: UpdateSolicitudOcDto, soloUsuario?: string | null) {
+    const existing = await this.findOne(solicitudOc, soloUsuario)
     if (existing.estado !== 'A' || existing.autorizadaPor) {
       throw new BadRequestException(
         'Solo se pueden editar solicitudes activas sin autorizar.',
@@ -401,8 +406,8 @@ export class SolicitudOcService {
     }
   }
 
-  async cancel(solicitudOc: string, usuario: string) {
-    const existing = await this.findOne(solicitudOc)
+  async cancel(solicitudOc: string, usuario: string, soloUsuario?: string | null) {
+    const existing = await this.findOne(solicitudOc, soloUsuario)
     if (existing.estado === 'O') {
       throw new BadRequestException('La solicitud ya está cancelada.')
     }

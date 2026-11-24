@@ -7,8 +7,9 @@ import { SolicitudCompraHistorialTab } from '@/components/tabs/solicitud-compra-
 import { OrdenCompraTab } from '@/components/tabs/orden-compra-tab'
 import type { Articulo } from '@/lib/types'
 import { useAuth } from '@/lib/auth/context'
-import { useCanAprobarOrdenCompraQuery } from '@/lib/permisos/use-permisos'
+import { useCanAprobarOrdenCompraQuery, useTieneAlgunPermisoSistemaQuery } from '@/lib/permisos/use-permisos'
 import LoginPage from '@/components/auth/login-page'
+import SinPermisosPage from '@/components/auth/sin-permisos-page'
 import { API_BASE_URL } from '@/lib/api-base-url'
 import {
   buildArticuloSolicitudQuery,
@@ -22,6 +23,8 @@ export default function Home() {
   const { isAuthenticated, isLoading: authLoading, user } = useAuth()
   const { canAprobarOrdenCompra, isLoading: permisosOcLoading } =
     useCanAprobarOrdenCompraQuery()
+  const { tieneAlgunPermisoSistema, isLoading: permisosSistemaLoading } =
+    useTieneAlgunPermisoSistemaQuery()
   const [mounted, setMounted] = useState(false)
   const [activeTab, setActiveTab] = useState<NavTab>('solicitud-nueva')
   const [serverOnline, setServerOnline] = useState(false)
@@ -39,7 +42,7 @@ export default function Home() {
   }, [activeTab, canAprobarOrdenCompra, permisosOcLoading])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!mounted || !isAuthenticated || permisosSistemaLoading || !tieneAlgunPermisoSistema) return
 
     let cancelled = false
 
@@ -74,7 +77,7 @@ export default function Home() {
     return () => {
       cancelled = true
     }
-  }, [mounted, isAuthenticated])
+  }, [mounted, isAuthenticated, permisosSistemaLoading, tieneAlgunPermisoSistema])
 
   const getSelectOptions = useCallback((selectedValue: string, sourceList: Articulo[]) => {
     const list = filterArticulosSolicitudCompra([...sourceList])
@@ -108,7 +111,7 @@ export default function Home() {
     mergeToGlobalArticulos,
   }
 
-  if (!mounted || authLoading) {
+  if (!mounted || authLoading || (isAuthenticated && permisosSistemaLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
@@ -117,6 +120,8 @@ export default function Home() {
   }
 
   if (!isAuthenticated) return <LoginPage />
+
+  if (!tieneAlgunPermisoSistema) return <SinPermisosPage />
 
   return (
     <AppShell

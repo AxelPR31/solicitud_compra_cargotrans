@@ -1,11 +1,10 @@
 import {
   BadRequestException,
   ForbiddenException,
-  Inject,
   Injectable,
 } from '@nestjs/common'
-import { DataSource, Repository } from 'typeorm'
-import { TENANT_CONENCTION } from '../tenant/tenant.module'
+import { InjectRepository } from '@nestjs/typeorm'
+import { Repository } from 'typeorm'
 import { UsuarioSoftland } from '../usuario-softland/entities/usuario-softland.entity'
 import { UserPrincipal } from '../auth/types/user-principal'
 import { CsPermisoUsuario } from './entities/cs-permiso-usuario.entity'
@@ -32,9 +31,13 @@ export class PermisoUsuarioService {
   private permisoRepo: Repository<CsPermisoUsuario>
   private usuarioRepo: Repository<UsuarioSoftland>
 
-  constructor(@Inject(TENANT_CONENCTION) dataSource: DataSource) {
-    this.permisoRepo = dataSource.getRepository(CsPermisoUsuario)
-    this.usuarioRepo = dataSource.getRepository(UsuarioSoftland)
+  // Conexión por defecto (singleton): AuthGuard depende de este servicio y no puede ser request-scoped.
+  constructor(
+    @InjectRepository(CsPermisoUsuario) permisoRepo: Repository<CsPermisoUsuario>,
+    @InjectRepository(UsuarioSoftland) usuarioRepo: Repository<UsuarioSoftland>,
+  ) {
+    this.permisoRepo = permisoRepo
+    this.usuarioRepo = usuarioRepo
   }
 
   async getPermisosActivos(usuario: string): Promise<string[]> {

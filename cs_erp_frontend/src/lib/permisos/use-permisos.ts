@@ -13,6 +13,7 @@ import {
   canAprobarSolicitudCompra,
   canManagePermisos,
   canRegistrarSolicitudCompra,
+  tieneAlgunPermisoSistema,
 } from '@/lib/auth/session-flags'
 import { useAuthStore } from '@/lib/auth/store'
 import { listPermisosApi, setPermisoApi } from './api'
@@ -64,6 +65,11 @@ export const useCanAprobarSolicitudCompraQuery = () => {
 export const useCanAprobarOrdenCompraQuery = () => {
   const { permisosQuery, value, isLoading } = usePermisosSessionFlags(canAprobarOrdenCompra)
   return { permisosQuery, canAprobarOrdenCompra: value, isLoading }
+}
+
+export const useTieneAlgunPermisoSistemaQuery = () => {
+  const { value, isLoading } = usePermisosSessionFlags(tieneAlgunPermisoSistema)
+  return { tieneAlgunPermisoSistema: value, isLoading }
 }
 
 export const useCanManagePermisosQuery = () => {

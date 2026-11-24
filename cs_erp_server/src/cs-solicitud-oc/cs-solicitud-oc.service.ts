@@ -20,6 +20,32 @@ import { isCsWorkflowEstado } from './types/cs-workflow-estado.type'
 
 import { escapeMsSqlLike } from '../core/sql/escape-ms-sql-like'
 import { rollbackOrRethrow } from '../core/sql/rollback-or-rethrow'
+import { esSolicitudDeUsuario } from '../permiso-usuario/solicitud-visibilidad'
+
+const MS_POR_DIA = 24 * 60 * 60 * 1000
+
+const fechaNicaraguaFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Managua',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+function diaNicaraguaUtc(value: Date): number {
+  const [y, m, d] = fechaNicaraguaFormat.format(value).split('-').map(Number)
+  return Date.UTC(y, m - 1, d)
+}
+
+/** Días calendario (hora Nicaragua) desde que se creó hasta hoy o hasta que se aprobó/rechazó. */
+function calcularDiasEspera(entity: CsSolicitudOc, now: Date): number | null {
+  const inicio = entity.fechaHoraSolicitud ?? entity.createDate ?? entity.fechaSolicitud
+  if (!inicio) return null
+  const fin = entity.workflowEstado === 'PLANEADA' ? now : entity.fechaAprobacion ?? now
+  const dias = Math.round(
+    (diaNicaraguaUtc(new Date(fin)) - diaNicaraguaUtc(new Date(inicio))) / MS_POR_DIA,
+  )
+  return Math.max(0, dias)
+}
 
 @Injectable()
 export class CsSolicitudOcService {
@@ -162,7 +188,7 @@ export class CsSolicitudOcService {
     return this.findOne(saved.id)
   }
 
-  async findAll(query: FindCsSolicitudOcDto) {
+  async findAll(query: FindCsSolicitudOcDto, soloUsuario?: string | null) {
     const {
       limit = 50,
       offset = 0,
@@ -187,6 +213,10 @@ export class CsSolicitudOcService {
       .addOrderBy('s.id', 'DESC')
       .take(limit)
       .skip(offset)
+
+    if (soloUsuario) {
+      qb.andWhere('UPPER(RTRIM(s.usuarioSolicita)) = :soloUsuario', { soloUsuario })
+    }
 
     const search = q?.trim()
     if (search) {
@@ -266,24 +296,26 @@ export class CsSolicitudOcService {
       qb.andWhere('s.workflowEstado = :planeada', { planeada: 'PLANEADA' })
     }
 
-    const [items, total] = await qb.getManyAndCount()
+    const [rows, total] = await qb.getManyAndCount()
+    const now = new Date()
+    const items = rows.map(row => ({ ...row, diasEspera: calcularDiasEspera(row, now) }))
     return { items, total, limit, offset }
   }
 
-  async findOne(id: number) {
+  async findOne(id: number, soloUsuario?: string | null) {
     const header = await this.repository.findOneBy({ id })
-    if (!header) {
+    if (!header || (soloUsuario && !esSolicitudDeUsuario(header.usuarioSolicita, soloUsuario))) {
       throw new NotFoundException(`Solicitud CS ${id} no encontrada`)
     }
     const lineas = await this.lineaRepository.find({
       where: { csSolicitudId: id },
       order: { linea: 'ASC' },
     })
-    return { ...header, lineas }
+    return { ...header, diasEspera: calcularDiasEspera(header, new Date()), lineas }
   }
 
-  async update(id: number, updateDto: UpdateSolicitudOcDto) {
-    const existing = await this.findOne(id)
+  async update(id: number, updateDto: UpdateSolicitudOcDto, soloUsuario?: string | null) {
+    const existing = await this.findOne(id, soloUsuario)
     if (existing.workflowEstado !== 'PLANEADA') {
       throw new BadRequestException('Solo se pueden editar solicitudes en estado PLANEADA.')
     }

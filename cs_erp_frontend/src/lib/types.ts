@@ -105,6 +105,8 @@ export interface CsSolicitudOc {
   usuarioAprobo?: string
   fechaAprobacion?: string
   motivoRechazo?: string
+  /** Días calendario en espera (planeada) o que tardó en aprobarse/rechazarse */
+  diasEspera?: number | null
   rubro1?: string
   rubro2?: string
   rubro3?: string

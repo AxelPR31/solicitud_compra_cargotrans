@@ -3,34 +3,38 @@ import {
   ExecutionContext,
   HttpException,
   HttpStatus,
-  Inject,
   Injectable,
   Logger,
 } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
+import { InjectRepository } from '@nestjs/typeorm'
 import { Request, Response } from 'express'
 import { JwtPayload } from 'jsonwebtoken'
-import { TENANT_CONENCTION } from 'src/tenant/tenant.module'
 import { UsuarioSoftland } from 'src/usuario-softland/entities/usuario-softland.entity'
-import { DataSource, Repository } from 'typeorm'
+import { Repository } from 'typeorm'
 import constants from '../constants'
 import { UserPrincipal } from 'src/auth/types/user-principal'
 import { Reflector } from '@nestjs/core'
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 import { PermisoUsuarioService } from 'src/permiso-usuario/permiso-usuario.service'
+import {
+  MENSAJE_SIN_PERMISO_SISTEMA,
+  tieneAlgunPermisoSistema,
+} from 'src/permiso-usuario/permiso-sistema'
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   private softlandRepository: Repository<UsuarioSoftland>
   private readonly logger = new Logger(AuthGuard.name)
 
+  // Sin dependencias request-scoped: como APP_GUARD global, Nest no ejecuta guards request-scoped.
   constructor(
     private readonly reflector: Reflector,
     private readonly _jwtService: JwtService,
-    @Inject(TENANT_CONENCTION) dataSource: DataSource,
+    @InjectRepository(UsuarioSoftland) softlandRepository: Repository<UsuarioSoftland>,
     private readonly permisoUsuarioService: PermisoUsuarioService,
   ) {
-    this.softlandRepository = dataSource.getRepository(UsuarioSoftland)
+    this.softlandRepository = softlandRepository
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -202,6 +206,13 @@ export class AuthGuard implements CanActivate {
       `✅ AUTH SUCCESS: ${method} ${url} - Controller: ${controllerName}.${handlerName} - User: ${user.usuario} - Token: ${remainingMinutes}m ${remainingSeconds}s remaining - IP: ${ip} - Time: ${timestamp}`,
     )
     ;(request as any).user = user
+
+    if (controllerName !== 'AuthController' && !tieneAlgunPermisoSistema(user.permisosCs)) {
+      throw new HttpException(
+        { message: MENSAJE_SIN_PERMISO_SISTEMA, code: 'SIN_PERMISO_SISTEMA' },
+        HttpStatus.FORBIDDEN,
+      )
+    }
     return true
   }
 }
